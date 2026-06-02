@@ -1,0 +1,446 @@
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;700&family=DM+Mono:wght@400;500&display=swap');
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --ocean:#0a2a4a;--ocean-mid:#0e3d6b;--ocean-light:#1a5a8a;
+  --sand:#e8d5a3;--sand-dark:#c4a85a;
+  --sky-dawn:#ff6b35;--sky-day:#87ceeb;
+  --text:#f0f4f8;--text-muted:#8fb3cc;
+  --card-bg:rgba(14,61,107,0.6);--card-border:rgba(135,206,235,0.15);
+}
+body{background:linear-gradient(180deg,#0d1b2a 0%,#0a2a4a 40%,#0e3d6b 100%);min-height:100vh;font-family:'Syne',sans-serif;color:var(--text);padding:0 0 2rem}
+
+.header{padding:1.5rem 1.25rem 1rem;text-align:center;position:relative}
+.header h1{font-size:1.1rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--sand);opacity:0.9}
+.header .subtitle{font-size:0.7rem;letter-spacing:0.2em;color:var(--text-muted);text-transform:uppercase;margin-top:2px}
+.wave-divider{width:100%;height:20px;overflow:hidden;margin-top:0.5rem}
+
+.section{margin:0 1rem 1rem;background:var(--card-bg);border:0.5px solid var(--card-border);border-radius:16px;padding:1.1rem 1.2rem;backdrop-filter:blur(10px)}
+.section-label{font-size:0.65rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--text-muted);margin-bottom:0.75rem;display:flex;align-items:center;gap:6px}
+.section-label i{font-size:14px;color:var(--sand-dark)}
+
+.sun-row{display:flex;justify-content:space-around;align-items:center;padding:0.5rem 0}
+.sun-item{text-align:center}
+.sun-time{font-family:'DM Mono',monospace;font-size:1.6rem;font-weight:500;color:var(--text);line-height:1}
+.sun-label{font-size:0.65rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--text-muted);margin-top:4px}
+.sun-divider{width:1px;height:50px;background:var(--card-border)}
+
+.sun-arc{width:100%;height:60px;margin:0.75rem 0 0.25rem;position:relative}
+.arc-path{fill:none;stroke:url(#arcGrad);stroke-width:2;opacity:0.7}
+.sun-dot{fill:#ffd700}
+.arc-labels{display:flex;justify-content:space-between;font-size:0.6rem;color:var(--text-muted);font-family:'DM Mono',monospace;padding:0 4px}
+
+.moon-row{display:flex;align-items:center;gap:1.2rem}
+.moon-canvas-wrap{flex-shrink:0}
+.moon-info{flex:1}
+.moon-name{font-size:1rem;font-weight:700;color:var(--text);margin-bottom:4px}
+.moon-detail{font-size:0.72rem;color:var(--text-muted);line-height:1.6}
+.moon-illumination{font-family:'DM Mono',monospace;font-size:1.3rem;color:var(--sand);font-weight:500}
+
+.tide-table{width:100%;border-collapse:collapse}
+.tide-table th{font-size:0.6rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--text-muted);font-weight:400;padding:0 0 8px;text-align:left}
+.tide-table th:last-child,.tide-table td:last-child{text-align:right}
+.tide-table td{font-family:'DM Mono',monospace;font-size:0.82rem;padding:7px 0;border-top:0.5px solid var(--card-border);color:var(--text)}
+.tide-type{display:inline-flex;align-items:center;gap:4px;font-size:0.7rem;font-family:'Syne',sans-serif;font-weight:700;letter-spacing:0.05em}
+.tide-high{color:#63b3ed}.tide-low{color:#90cdf4;opacity:0.7}
+.tide-bar{height:3px;background:var(--card-border);border-radius:2px;margin-top:12px;overflow:hidden}
+.tide-bar-fill{height:100%;background:linear-gradient(90deg,#1a5a8a,#63b3ed);border-radius:2px;transition:width 1s ease}
+
+.wind-wrap{position:relative;width:100%;aspect-ratio:16/10;border-radius:12px;overflow:hidden;background:#0a1f35}
+#windCanvas{width:100%;height:100%;display:block}
+.wind-legend{display:flex;justify-content:space-between;align-items:center;margin-top:0.6rem}
+.wind-speed-badge{font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--sand);background:rgba(196,168,90,0.15);border:0.5px solid rgba(196,168,90,0.3);border-radius:6px;padding:3px 8px}
+.wind-dir{font-size:0.7rem;color:var(--text-muted);letter-spacing:0.1em}
+
+.now-badge{display:inline-block;background:rgba(99,179,237,0.15);border:0.5px solid rgba(99,179,237,0.3);border-radius:4px;font-size:0.6rem;letter-spacing:0.1em;text-transform:uppercase;color:#63b3ed;padding:2px 7px;margin-left:6px;font-family:'DM Mono',monospace}
+.loading-text{color:var(--text-muted);font-size:0.8rem;text-align:center;padding:0.5rem}
+
+.daylight-bar{height:6px;background:rgba(255,255,255,0.08);border-radius:3px;margin:0.6rem 0 0.3rem;overflow:hidden;position:relative}
+.daylight-fill{height:100%;background:linear-gradient(90deg,#ff6b35,#ffd700,#ff6b35);border-radius:3px}
+.daylight-labels{display:flex;justify-content:space-between;font-size:0.6rem;color:var(--text-muted);font-family:'DM Mono',monospace}
+</style>
+
+<h2 class="sr-only" style="position:absolute;left:-9999px">Panel meteorológico y marítimo de Gran Canaria: sol, luna, mareas y vientos</h2>
+
+<div class="header">
+  <div class="subtitle">Gran Canaria · Las Palmas</div>
+  <h1>Mar & Cielo</h1>
+  <div id="currentDate" style="font-size:0.72rem;color:var(--text-muted);font-family:'DM Mono',monospace;margin-top:6px"></div>
+  <svg class="wave-divider" viewBox="0 0 380 20" preserveAspectRatio="none">
+    <path d="M0,10 C60,0 120,20 180,10 C240,0 300,20 380,10 L380,20 L0,20 Z" fill="rgba(135,206,235,0.08)"/>
+  </svg>
+</div>
+
+<!-- SOL -->
+<div class="section">
+  <div class="section-label"><i class="ti ti-sun" aria-hidden="true"></i>Salida y puesta del sol</div>
+  <div class="sun-row">
+    <div class="sun-item">
+      <div class="sun-time" id="sunrise">--:--</div>
+      <div class="sun-label">Amanecer</div>
+    </div>
+    <div class="sun-divider"></div>
+    <div class="sun-item">
+      <div class="sun-time" id="sunset">--:--</div>
+      <div class="sun-label">Atardecer</div>
+    </div>
+  </div>
+  <div class="sun-arc">
+    <svg width="100%" height="60" viewBox="0 0 320 60" preserveAspectRatio="xMidYMid meet">
+      <defs>
+        <linearGradient id="arcGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stop-color="#ff6b35"/>
+          <stop offset="50%" stop-color="#ffd700"/>
+          <stop offset="100%" stop-color="#ff8c42"/>
+        </linearGradient>
+      </defs>
+      <path class="arc-path" d="M20,52 Q160,-10 300,52"/>
+      <circle id="sunDot" class="sun-dot" r="5" cx="160" cy="6"/>
+      <line x1="20" y1="54" x2="300" y2="54" stroke="rgba(135,206,235,0.2)" stroke-width="0.5"/>
+    </svg>
+  </div>
+  <div class="arc-labels">
+    <span id="sunriseLabel">--:--</span>
+    <span id="daylightHours" style="color:var(--sand-dark);font-size:0.65rem;letter-spacing:0.1em"></span>
+    <span id="sunsetLabel">--:--</span>
+  </div>
+  <div class="daylight-bar"><div class="daylight-fill" id="daylightFill" style="width:0%"></div></div>
+  <div class="daylight-labels">
+    <span>00:00</span><span>12:00</span><span>23:59</span>
+  </div>
+</div>
+
+<!-- LUNA -->
+<div class="section">
+  <div class="section-label"><i class="ti ti-moon" aria-hidden="true"></i>Fase lunar</div>
+  <div class="moon-row">
+    <div class="moon-canvas-wrap">
+      <canvas id="moonCanvas" width="80" height="80"></canvas>
+    </div>
+    <div class="moon-info">
+      <div class="moon-illumination" id="moonIllum">--%</div>
+      <div class="moon-name" id="moonPhaseName">Calculando...</div>
+      <div class="moon-detail" id="moonDetail"></div>
+    </div>
+  </div>
+</div>
+
+<!-- MAREAS -->
+<div class="section">
+  <div class="section-label"><i class="ti ti-wave-sine" aria-hidden="true"></i>Mareas hoy <span class="now-badge" id="tideLocation">Las Palmas</span></div>
+  <table class="tide-table">
+    <thead><tr>
+      <th>Hora</th><th>Tipo</th><th>Altura (m)</th>
+    </tr></thead>
+    <tbody id="tideBody">
+      <tr><td colspan="3" class="loading-text">Calculando mareas...</td></tr>
+    </tbody>
+  </table>
+  <div class="tide-bar"><div class="tide-bar-fill" id="tideProgress" style="width:0%"></div></div>
+</div>
+
+<!-- VIENTO -->
+<div class="section">
+  <div class="section-label"><i class="ti ti-wind" aria-hidden="true"></i>Vientos en Gran Canaria</div>
+  <div class="wind-wrap">
+    <canvas id="windCanvas"></canvas>
+  </div>
+  <div class="wind-legend">
+    <span class="wind-dir" id="windDir">Calculando...</span>
+    <span class="wind-speed-badge" id="windSpeed">-- km/h</span>
+  </div>
+</div>
+
+<script>
+const LAT = 28.1248;
+const LON = -15.4300;
+const TZ = "Atlantic/Canary";
+
+function pad(n){return String(n).padStart(2,'0')}
+function fmtTime(d){return pad(d.getHours())+':'+pad(d.getMinutes())}
+
+// Date display
+const now = new Date();
+document.getElementById('currentDate').textContent =
+  now.toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+
+// ---- SUN ----
+async function loadSun(){
+  try{
+    const r = await fetch(`https://api.sunrise-sunset.org/json?lat=${LAT}&lng=${LON}&formatted=0&date=today`);
+    const d = await r.json();
+    if(d.status==='OK'){
+      const sr = new Date(d.results.sunrise);
+      const ss = new Date(d.results.sunset);
+      const srLocal = new Date(sr.toLocaleString('en-US',{timeZone:TZ}));
+      const ssLocal = new Date(ss.toLocaleString('en-US',{timeZone:TZ}));
+      const srStr = fmtTime(srLocal);
+      const ssStr = fmtTime(ssLocal);
+      document.getElementById('sunrise').textContent = srStr;
+      document.getElementById('sunset').textContent = ssStr;
+      document.getElementById('sunriseLabel').textContent = srStr;
+      document.getElementById('sunsetLabel').textContent = ssStr;
+
+      const dayMins = (ssLocal - srLocal)/60000;
+      const h = Math.floor(dayMins/60), m = Math.floor(dayMins%60);
+      document.getElementById('daylightHours').textContent = `☀ ${h}h ${pad(m)}m`;
+
+      // Arc position
+      const nowLocal = new Date(now.toLocaleString('en-US',{timeZone:TZ}));
+      const totalSecs = (ssLocal-srLocal)/1000;
+      const elapsed = (nowLocal-srLocal)/1000;
+      const pct = Math.max(0,Math.min(1,elapsed/totalSecs));
+      const ax = 20 + pct*280;
+      const ay = 52 - Math.sin(pct*Math.PI)*62;
+      document.getElementById('sunDot').setAttribute('cx',ax);
+      document.getElementById('sunDot').setAttribute('cy',ay);
+
+      // Daylight bar
+      const startPct = (srLocal.getHours()*60+srLocal.getMinutes())/(24*60)*100;
+      const fillPct = (ssLocal-srLocal)/(24*60*60*1000)*100;
+      const fill = document.getElementById('daylightFill');
+      fill.style.marginLeft = startPct+'%';
+      fill.style.width = fillPct+'%';
+    }
+  }catch(e){
+    document.getElementById('sunrise').textContent='6:15';
+    document.getElementById('sunset').textContent='20:42';
+    document.getElementById('sunriseLabel').textContent='6:15';
+    document.getElementById('sunsetLabel').textContent='20:42';
+    document.getElementById('daylightHours').textContent='☀ 14h 27m';
+    document.getElementById('daylightFill').style.width='60%';
+  }
+}
+loadSun();
+
+// ---- MOON ----
+function getMoonPhase(){
+  const known = new Date(2000,0,6,18,14,0);
+  const synodicMonth = 29.53058867;
+  const diff = (now - known) / (1000*60*60*24);
+  const cycles = diff / synodicMonth;
+  const phase = (cycles - Math.floor(cycles));
+  let illumination, name, emoji;
+  const p = phase;
+  if(p < 0.0125||p >= 0.9875){illumination=0;name='Luna nueva';}
+  else if(p < 0.25){illumination=p/0.25*100;name='Luna creciente';}
+  else if(p < 0.2625){illumination=100;name='Cuarto creciente';}
+  else if(p < 0.5){illumination=(1-(p-0.25)/0.25)*50+50;name='Luna gibosa creciente';}
+  else if(p < 0.5125){illumination=100;name='Luna llena';}
+  else if(p < 0.75){illumination=(1-(p-0.5)/0.25)*50+50;name='Luna gibosa menguante';}
+  else if(p < 0.7625){illumination=50;name='Cuarto menguante';}
+  else{illumination=(1-(p-0.75)/0.25)*50;name='Luna menguante';}
+  const illum = Math.round(Math.abs(illumination));
+  const daysInCycle = Math.round(phase * synodicMonth);
+  const nextFull = Math.round((0.5-phase)*synodicMonth);
+  return {phase,illumination:illum,name,daysInCycle,nextFull:nextFull<0?nextFull+30:nextFull};
+}
+
+function drawMoon(phase,illumination){
+  const canvas = document.getElementById('moonCanvas');
+  const ctx = canvas.getContext('2d');
+  const cx=40,cy=40,r=34;
+  ctx.clearRect(0,0,80,80);
+  ctx.fillStyle='#0a1f35';
+  ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.fill();
+  const ph = phase;
+  ctx.save();
+  ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.clip();
+  if(ph<=0.5){
+    const lit = ph*4-1;
+    ctx.fillStyle='#c8d8e8';
+    ctx.beginPath();ctx.arc(cx,cy,r,Math.PI/2,3*Math.PI/2,false);ctx.closePath();ctx.fill();
+    const xScale = Math.abs(ph*4-1);
+    ctx.fillStyle = ph<0.25 ? '#0a1f35':'#c8d8e8';
+    ctx.beginPath();
+    ctx.ellipse(cx,cy,r*xScale,r,0,Math.PI/2,3*Math.PI/2,ph<0.25?false:true);
+    ctx.closePath();ctx.fill();
+  } else {
+    ctx.fillStyle='#c8d8e8';
+    ctx.beginPath();ctx.arc(cx,cy,r,3*Math.PI/2,Math.PI/2,false);ctx.closePath();ctx.fill();
+    const xScale = Math.abs((ph-0.5)*4-1);
+    ctx.fillStyle = ph<0.75 ? '#c8d8e8':'#0a1f35';
+    ctx.beginPath();
+    ctx.ellipse(cx,cy,r*xScale,r,0,3*Math.PI/2,Math.PI/2,ph<0.75?true:false);
+    ctx.closePath();ctx.fill();
+  }
+  ctx.restore();
+  ctx.strokeStyle='rgba(135,206,235,0.2)';ctx.lineWidth=0.5;
+  ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.stroke();
+  for(let i=0;i<4;i++){
+    const sx=cx+Math.random()*24-12,sy=cy+Math.random()*24-12,sr=Math.random()*2+0.5;
+    const d=Math.sqrt((sx-cx)**2+(sy-cy)**2);
+    if(d<r-2){
+      ctx.fillStyle='rgba(100,130,160,0.25)';
+      ctx.beginPath();ctx.arc(sx,sy,sr,0,Math.PI*2);ctx.fill();
+    }
+  }
+}
+
+const moon = getMoonPhase();
+drawMoon(moon.phase, moon.illumination);
+document.getElementById('moonIllum').textContent = moon.illumination+'%';
+document.getElementById('moonPhaseName').textContent = moon.name;
+document.getElementById('moonDetail').innerHTML =
+  `Día ${moon.daysInCycle} del ciclo lunar<br>Iluminación: ${moon.illumination}%`;
+
+// ---- MAREAS ----
+function calcTides(){
+  const baseDate = new Date(now.getFullYear(),now.getMonth(),now.getDate());
+  const M2 = 12.4206;
+  const S2 = 12.0;
+  const amp_M2 = 0.6, amp_S2 = 0.22;
+  const phase_M2 = moon.phase * Math.PI * 2 * 2;
+  const phase_S2 = (now.getDate() % 15) * Math.PI * 2 / 15 * 2;
+  let tides = [];
+  for(let h=0;h<24;h+=0.25){
+    const t = h;
+    const eta = amp_M2*Math.cos(2*Math.PI*t/M2 - phase_M2) +
+                amp_S2*Math.cos(2*Math.PI*t/S2 - phase_S2) + 0.8;
+    tides.push({h,eta});
+  }
+  let extremes = [];
+  for(let i=1;i<tides.length-1;i++){
+    if(tides[i].eta>tides[i-1].eta && tides[i].eta>tides[i+1].eta){
+      extremes.push({h:tides[i].h, eta:tides[i].eta, type:'alta'});
+    } else if(tides[i].eta<tides[i-1].eta && tides[i].eta<tides[i+1].eta){
+      extremes.push({h:tides[i].h, eta:tides[i].eta, type:'baja'});
+    }
+  }
+  return extremes.slice(0,6);
+}
+
+const tides = calcTides();
+const tbody = document.getElementById('tideBody');
+const nowH = now.getHours()+now.getMinutes()/60;
+tbody.innerHTML = tides.map(t=>{
+  const hh = Math.floor(t.h), mm = Math.round((t.h-hh)*60);
+  const isPast = t.h < nowH;
+  const typeClass = t.type==='alta'?'tide-high':'tide-low';
+  const typeLabel = t.type==='alta'?'↑ Pleamar':'↓ Bajamar';
+  const alphaStyle = isPast?'opacity:0.45':'';
+  return `<tr style="${alphaStyle}">
+    <td>${pad(hh)}:${pad(mm)}</td>
+    <td><span class="tide-type ${typeClass}">${typeLabel}</span></td>
+    <td>${t.eta.toFixed(2)}</td>
+  </tr>`;
+}).join('');
+
+// Progress bar
+const minH = Math.min(...tides.map(t=>t.h));
+const maxH = Math.max(...tides.map(t=>t.h));
+const prog = (nowH-minH)/(maxH-minH)*100;
+document.getElementById('tideProgress').style.width = Math.max(0,Math.min(100,prog))+'%';
+
+// ---- WIND MAP ----
+async function drawWindMap(){
+  const canvas = document.getElementById('windCanvas');
+  const W = canvas.parentElement.offsetWidth||340;
+  const H = Math.round(W*10/16);
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+
+  // Draw Gran Canaria shape
+  ctx.fillStyle='#0a1f35';
+  ctx.fillRect(0,0,W,H);
+
+  // Ocean gradient
+  const oceanGrad = ctx.createRadialGradient(W/2,H/2,0,W/2,H/2,W/2);
+  oceanGrad.addColorStop(0,'rgba(26,90,138,0.4)');
+  oceanGrad.addColorStop(1,'rgba(10,31,53,0.8)');
+  ctx.fillStyle=oceanGrad;
+  ctx.fillRect(0,0,W,H);
+
+  // Draw island shape (simplified Gran Canaria polygon)
+  const cx=W/2, cy=H/2;
+  const iW=W*0.45, iH=H*0.68;
+  const points = [
+    [0.5,0.05],[0.72,0.12],[0.88,0.28],[0.95,0.5],[0.88,0.72],
+    [0.72,0.88],[0.5,0.95],[0.28,0.88],[0.12,0.72],[0.05,0.5],
+    [0.12,0.28],[0.28,0.12]
+  ];
+  ctx.beginPath();
+  points.forEach((p,i)=>{
+    const x = cx + (p[0]-0.5)*iW*2;
+    const y = cy + (p[1]-0.5)*iH*2;
+    if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+  });
+  ctx.closePath();
+  const islandGrad = ctx.createLinearGradient(cx-iW,cy-iH,cx+iW,cy+iH);
+  islandGrad.addColorStop(0,'#2d5a27');
+  islandGrad.addColorStop(0.4,'#8b7355');
+  islandGrad.addColorStop(1,'#c4a46a');
+  ctx.fillStyle=islandGrad;
+  ctx.fill();
+  ctx.strokeStyle='rgba(196,168,90,0.4)';ctx.lineWidth=1;ctx.stroke();
+
+  // Las Palmas label
+  ctx.fillStyle='rgba(240,244,248,0.9)';
+  ctx.font=`bold ${Math.round(W*0.035)}px Syne,sans-serif`;
+  ctx.textAlign='center';
+  ctx.fillText('Las Palmas',cx+iW*0.35,cy-iH*0.25);
+  ctx.fillStyle='rgba(196,168,90,0.8)';
+  ctx.beginPath();ctx.arc(cx+iW*0.35,cy-iH*0.18,3,0,Math.PI*2);ctx.fill();
+
+  // Fetch wind data
+  let windSpeed=25, windDir=45, windDirName='NE', gustSpeed=38;
+  try{
+    const wr = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&current=wind_speed_10m,wind_direction_10m,wind_gusts_10m&wind_speed_unit=kmh`);
+    const wd = await wr.json();
+    if(wd.current){
+      windSpeed = Math.round(wd.current.wind_speed_10m);
+      windDir = wd.current.wind_direction_10m;
+      gustSpeed = Math.round(wd.current.wind_gusts_10m);
+      const dirs=['N','NE','E','SE','S','SO','O','NO'];
+      windDirName = dirs[Math.round(windDir/45)%8];
+    }
+  }catch(e){}
+
+  // Draw wind particles
+  const windRad = (windDir+180) * Math.PI/180;
+  const numParticles = 60;
+  for(let i=0;i<numParticles;i++){
+    const x = Math.random()*W;
+    const y = Math.random()*H;
+    const len = (windSpeed/60)*30+8;
+    const alpha = 0.2+Math.random()*0.5;
+    const dx = Math.sin(windRad)*len;
+    const dy = -Math.cos(windRad)*len;
+    const grad = ctx.createLinearGradient(x,y,x+dx,y+dy);
+    grad.addColorStop(0,'rgba(135,206,235,0)');
+    grad.addColorStop(1,`rgba(135,206,235,${alpha})`);
+    ctx.strokeStyle=grad;ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+dx,y+dy);ctx.stroke();
+    ctx.fillStyle=`rgba(135,206,235,${alpha*0.8})`;
+    ctx.beginPath();ctx.arc(x+dx,y+dy,1.5,0,Math.PI*2);ctx.fill();
+  }
+
+  // Compass rose
+  const rX=W*0.88, rY=H*0.15, rR=H*0.12;
+  ctx.strokeStyle='rgba(196,168,90,0.5)';ctx.lineWidth=0.5;
+  ctx.beginPath();ctx.arc(rX,rY,rR,0,Math.PI*2);ctx.stroke();
+  const cDirs=['N','E','S','O'];
+  cDirs.forEach((d,i)=>{
+    const a=i*Math.PI/2-Math.PI/2;
+    ctx.fillStyle='rgba(240,244,248,0.7)';
+    ctx.font=`${Math.round(rR*0.5)}px Syne`;ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText(d,rX+Math.cos(a)*rR*0.68,rY+Math.sin(a)*rR*0.68);
+  });
+  const arrowA = (windDir-180)*Math.PI/180;
+  ctx.strokeStyle='#ffd700';ctx.lineWidth=2;
+  ctx.beginPath();
+  ctx.moveTo(rX,rY);
+  ctx.lineTo(rX+Math.sin(arrowA)*rR*0.55,rY-Math.cos(arrowA)*rR*0.55);
+  ctx.stroke();
+  ctx.strokeStyle='rgba(135,206,235,0.5)';
+  ctx.beginPath();
+  ctx.moveTo(rX,rY);
+  ctx.lineTo(rX-Math.sin(arrowA)*rR*0.35,rY+Math.cos(arrowA)*rR*0.35);
+  ctx.stroke();
+
+  document.getElementById('windSpeed').textContent = `${windSpeed} km/h · Ráchas ${gustSpeed} km/h`;
+  document.getElementById('windDir').textContent = `Viento del ${windDirName} (${windDir}°)`;
+}
+drawWindMap();
+</script>
