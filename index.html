@@ -404,11 +404,7 @@ tailwind.config = {
       </div>
     </section>
  
-    <!-- SOS -->
-    <button id="sos-btn" class="w-full bg-error text-on-error font-label-caps text-label-caps py-4 rounded-lg flex items-center justify-center gap-3 transition-transform active:scale-[0.97] shadow-lg md:col-span-2 xl:col-span-3">
-      <span class="material-symbols-outlined" style="font-variation-settings:'FILL' 1">emergency</span>
-       CANAL 16 - EMERGENCIA MARÍTIMA
-    </button>
+
   </div>
  
   <!-- TAB: Tides -->
@@ -579,7 +575,7 @@ tailwind.config = {
    temp: null, humidity: null, pressure: null, uv: null,
    visibility: null, sunrise: null, sunset: null,
    windUnit: 'kn',
-   aemetKey: localStorage.getItem('vanitaperal_aemet_key') || null,
+   aemetKey: localStorage.getItem('vanitaperal_aemet_key') || 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ2YW5pdGFwZXJhbEBnbWFpbC5jb20iLCJqdGkiOiJjYTViY2U2Yy1lOWM5LTQ2Y2EtODcyZC1hOTQwODU5YWJlMTkiLCJpc3MiOiJBRU1FVCIsImlhdCI6MTc4MDQ4NDI5NiwidXNlcklkIjoiY2E1YmNlNmMtZTljOS00NmNhLTg3MmQtYTk0MDg1OWFiZTE5Iiwicm9sZSI6IiJ9.-u0u9lp_jJfbFXBRD706lpjorm-b4Llu85nJpcSkdlI',
    darkMode: false,
    lastUpdate: null,
  };
@@ -660,13 +656,15 @@ document.addEventListener('click', e => {
  // AEMET API KEY MODAL
  // ============================================================
  function initModal(){
-   if(state.aemetKey===null){
-     document.getElementById('api-modal').classList.remove('hidden');
-   } else {
-     document.getElementById('api-modal').classList.add('hidden');
-     updateAemetStatus();
-     loadAemetWarnings();
+   // Key hardcoded — modal never shown
+   document.getElementById('api-modal').classList.add('hidden');
+   // Persist to localStorage for consistency
+   if(!localStorage.getItem('vanitaperal_aemet_key')){
+     localStorage.setItem('vanitaperal_aemet_key', state.aemetKey);
    }
+   document.getElementById('aemet-key-status').textContent='Configurada';
+   document.getElementById('src-aemet').textContent='AEMET Live';
+   document.getElementById('src-aemet').className='source-badge source-live';
  }
  function saveAemetKey(){
    const k=document.getElementById('aemet-key-input').value.trim();
@@ -1446,20 +1444,7 @@ function getRelativeTime(t) {
    showToast(`Unidades: ${windLabel()}`);
  }
  
- // ============================================================
- // SOS
- // ============================================================
- let sosTimer=null;
- document.getElementById('sos-btn').addEventListener('pointerdown',()=>{
-   sosTimer=setTimeout(()=>{
-     showToast('🚨 MAYDAY · Contactando Canal 16 VHF',4000);
-     document.getElementById('sos-btn').style.background='#7f0000';
-     setTimeout(()=>document.getElementById('sos-btn').style.background='',2000);
-   },1500);
- });
- document.getElementById('sos-btn').addEventListener('pointerup',()=>clearTimeout(sosTimer));
- document.getElementById('sos-btn').addEventListener('pointerleave',()=>clearTimeout(sosTimer));
- document.getElementById('sos-btn').addEventListener('click',()=>showToast('Mantén pulsado 1.5s para activar emergencia',2000));
+
  
  // ============================================================
  // AUTO-REFRESH cada 10 minutos
