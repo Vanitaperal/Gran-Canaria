@@ -1,446 +1,1429 @@
-
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;700&family=DM+Mono:wght@400;500&display=swap');
-*{margin:0;padding:0;box-sizing:border-box}
-:root{
-  --ocean:#0a2a4a;--ocean-mid:#0e3d6b;--ocean-light:#1a5a8a;
-  --sand:#e8d5a3;--sand-dark:#c4a85a;
-  --sky-dawn:#ff6b35;--sky-day:#87ceeb;
-  --text:#f0f4f8;--text-muted:#8fb3cc;
-  --card-bg:rgba(14,61,107,0.6);--card-border:rgba(135,206,235,0.15);
-}
-body{background:linear-gradient(180deg,#0d1b2a 0%,#0a2a4a 40%,#0e3d6b 100%);min-height:100vh;font-family:'Syne',sans-serif;color:var(--text);padding:0 0 2rem}
-
-.header{padding:1.5rem 1.25rem 1rem;text-align:center;position:relative}
-.header h1{font-size:1.1rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--sand);opacity:0.9}
-.header .subtitle{font-size:0.7rem;letter-spacing:0.2em;color:var(--text-muted);text-transform:uppercase;margin-top:2px}
-.wave-divider{width:100%;height:20px;overflow:hidden;margin-top:0.5rem}
-
-.section{margin:0 1rem 1rem;background:var(--card-bg);border:0.5px solid var(--card-border);border-radius:16px;padding:1.1rem 1.2rem;backdrop-filter:blur(10px)}
-.section-label{font-size:0.65rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--text-muted);margin-bottom:0.75rem;display:flex;align-items:center;gap:6px}
-.section-label i{font-size:14px;color:var(--sand-dark)}
-
-.sun-row{display:flex;justify-content:space-around;align-items:center;padding:0.5rem 0}
-.sun-item{text-align:center}
-.sun-time{font-family:'DM Mono',monospace;font-size:1.6rem;font-weight:500;color:var(--text);line-height:1}
-.sun-label{font-size:0.65rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--text-muted);margin-top:4px}
-.sun-divider{width:1px;height:50px;background:var(--card-border)}
-
-.sun-arc{width:100%;height:60px;margin:0.75rem 0 0.25rem;position:relative}
-.arc-path{fill:none;stroke:url(#arcGrad);stroke-width:2;opacity:0.7}
-.sun-dot{fill:#ffd700}
-.arc-labels{display:flex;justify-content:space-between;font-size:0.6rem;color:var(--text-muted);font-family:'DM Mono',monospace;padding:0 4px}
-
-.moon-row{display:flex;align-items:center;gap:1.2rem}
-.moon-canvas-wrap{flex-shrink:0}
-.moon-info{flex:1}
-.moon-name{font-size:1rem;font-weight:700;color:var(--text);margin-bottom:4px}
-.moon-detail{font-size:0.72rem;color:var(--text-muted);line-height:1.6}
-.moon-illumination{font-family:'DM Mono',monospace;font-size:1.3rem;color:var(--sand);font-weight:500}
-
-.tide-table{width:100%;border-collapse:collapse}
-.tide-table th{font-size:0.6rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--text-muted);font-weight:400;padding:0 0 8px;text-align:left}
-.tide-table th:last-child,.tide-table td:last-child{text-align:right}
-.tide-table td{font-family:'DM Mono',monospace;font-size:0.82rem;padding:7px 0;border-top:0.5px solid var(--card-border);color:var(--text)}
-.tide-type{display:inline-flex;align-items:center;gap:4px;font-size:0.7rem;font-family:'Syne',sans-serif;font-weight:700;letter-spacing:0.05em}
-.tide-high{color:#63b3ed}.tide-low{color:#90cdf4;opacity:0.7}
-.tide-bar{height:3px;background:var(--card-border);border-radius:2px;margin-top:12px;overflow:hidden}
-.tide-bar-fill{height:100%;background:linear-gradient(90deg,#1a5a8a,#63b3ed);border-radius:2px;transition:width 1s ease}
-
-.wind-wrap{position:relative;width:100%;aspect-ratio:16/10;border-radius:12px;overflow:hidden;background:#0a1f35}
-#windCanvas{width:100%;height:100%;display:block}
-.wind-legend{display:flex;justify-content:space-between;align-items:center;margin-top:0.6rem}
-.wind-speed-badge{font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--sand);background:rgba(196,168,90,0.15);border:0.5px solid rgba(196,168,90,0.3);border-radius:6px;padding:3px 8px}
-.wind-dir{font-size:0.7rem;color:var(--text-muted);letter-spacing:0.1em}
-
-.now-badge{display:inline-block;background:rgba(99,179,237,0.15);border:0.5px solid rgba(99,179,237,0.3);border-radius:4px;font-size:0.6rem;letter-spacing:0.1em;text-transform:uppercase;color:#63b3ed;padding:2px 7px;margin-left:6px;font-family:'DM Mono',monospace}
-.loading-text{color:var(--text-muted);font-size:0.8rem;text-align:center;padding:0.5rem}
-
-.daylight-bar{height:6px;background:rgba(255,255,255,0.08);border-radius:3px;margin:0.6rem 0 0.3rem;overflow:hidden;position:relative}
-.daylight-fill{height:100%;background:linear-gradient(90deg,#ff6b35,#ffd700,#ff6b35);border-radius:3px}
-.daylight-labels{display:flex;justify-content:space-between;font-size:0.6rem;color:var(--text-muted);font-family:'DM Mono',monospace}
-</style>
-
-<h2 class="sr-only" style="position:absolute;left:-9999px">Panel meteorológico y marítimo de Gran Canaria: sol, luna, mareas y vientos</h2>
-
-<div class="header">
-  <div class="subtitle">Gran Canaria · Las Palmas</div>
-  <h1>Mar & Cielo</h1>
-  <div id="currentDate" style="font-size:0.72rem;color:var(--text-muted);font-family:'DM Mono',monospace;margin-top:6px"></div>
-  <svg class="wave-divider" viewBox="0 0 380 20" preserveAspectRatio="none">
-    <path d="M0,10 C60,0 120,20 180,10 C240,0 300,20 380,10 L380,20 L0,20 Z" fill="rgba(135,206,235,0.08)"/>
-  </svg>
-</div>
-
-<!-- SOL -->
-<div class="section">
-  <div class="section-label"><i class="ti ti-sun" aria-hidden="true"></i>Salida y puesta del sol</div>
-  <div class="sun-row">
-    <div class="sun-item">
-      <div class="sun-time" id="sunrise">--:--</div>
-      <div class="sun-label">Amanecer</div>
-    </div>
-    <div class="sun-divider"></div>
-    <div class="sun-item">
-      <div class="sun-time" id="sunset">--:--</div>
-      <div class="sun-label">Atardecer</div>
-    </div>
-  </div>
-  <div class="sun-arc">
-    <svg width="100%" height="60" viewBox="0 0 320 60" preserveAspectRatio="xMidYMid meet">
-      <defs>
-        <linearGradient id="arcGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-          <stop offset="0%" stop-color="#ff6b35"/>
-          <stop offset="50%" stop-color="#ffd700"/>
-          <stop offset="100%" stop-color="#ff8c42"/>
-        </linearGradient>
-      </defs>
-      <path class="arc-path" d="M20,52 Q160,-10 300,52"/>
-      <circle id="sunDot" class="sun-dot" r="5" cx="160" cy="6"/>
-      <line x1="20" y1="54" x2="300" y2="54" stroke="rgba(135,206,235,0.2)" stroke-width="0.5"/>
-    </svg>
-  </div>
-  <div class="arc-labels">
-    <span id="sunriseLabel">--:--</span>
-    <span id="daylightHours" style="color:var(--sand-dark);font-size:0.65rem;letter-spacing:0.1em"></span>
-    <span id="sunsetLabel">--:--</span>
-  </div>
-  <div class="daylight-bar"><div class="daylight-fill" id="daylightFill" style="width:0%"></div></div>
-  <div class="daylight-labels">
-    <span>00:00</span><span>12:00</span><span>23:59</span>
-  </div>
-</div>
-
-<!-- LUNA -->
-<div class="section">
-  <div class="section-label"><i class="ti ti-moon" aria-hidden="true"></i>Fase lunar</div>
-  <div class="moon-row">
-    <div class="moon-canvas-wrap">
-      <canvas id="moonCanvas" width="80" height="80"></canvas>
-    </div>
-    <div class="moon-info">
-      <div class="moon-illumination" id="moonIllum">--%</div>
-      <div class="moon-name" id="moonPhaseName">Calculando...</div>
-      <div class="moon-detail" id="moonDetail"></div>
-    </div>
-  </div>
-</div>
-
-<!-- MAREAS -->
-<div class="section">
-  <div class="section-label"><i class="ti ti-wave-sine" aria-hidden="true"></i>Mareas hoy <span class="now-badge" id="tideLocation">Las Palmas</span></div>
-  <table class="tide-table">
-    <thead><tr>
-      <th>Hora</th><th>Tipo</th><th>Altura (m)</th>
-    </tr></thead>
-    <tbody id="tideBody">
-      <tr><td colspan="3" class="loading-text">Calculando mareas...</td></tr>
-    </tbody>
-  </table>
-  <div class="tide-bar"><div class="tide-bar-fill" id="tideProgress" style="width:0%"></div></div>
-</div>
-
-<!-- VIENTO -->
-<div class="section">
-  <div class="section-label"><i class="ti ti-wind" aria-hidden="true"></i>Vientos en Gran Canaria</div>
-  <div class="wind-wrap">
-    <canvas id="windCanvas"></canvas>
-  </div>
-  <div class="wind-legend">
-    <span class="wind-dir" id="windDir">Calculando...</span>
-    <span class="wind-speed-badge" id="windSpeed">-- km/h</span>
-  </div>
-</div>
-
-<script>
-const LAT = 28.1248;
-const LON = -15.4300;
-const TZ = "Atlantic/Canary";
-
-function pad(n){return String(n).padStart(2,'0')}
-function fmtTime(d){return pad(d.getHours())+':'+pad(d.getMinutes())}
-
-// Date display
-const now = new Date();
-document.getElementById('currentDate').textContent =
-  now.toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
-
-// ---- SUN ----
-async function loadSun(){
-  try{
-    const r = await fetch(`https://api.sunrise-sunset.org/json?lat=${LAT}&lng=${LON}&formatted=0&date=today`);
-    const d = await r.json();
-    if(d.status==='OK'){
-      const sr = new Date(d.results.sunrise);
-      const ss = new Date(d.results.sunset);
-      const srLocal = new Date(sr.toLocaleString('en-US',{timeZone:TZ}));
-      const ssLocal = new Date(ss.toLocaleString('en-US',{timeZone:TZ}));
-      const srStr = fmtTime(srLocal);
-      const ssStr = fmtTime(ssLocal);
-      document.getElementById('sunrise').textContent = srStr;
-      document.getElementById('sunset').textContent = ssStr;
-      document.getElementById('sunriseLabel').textContent = srStr;
-      document.getElementById('sunsetLabel').textContent = ssStr;
-
-      const dayMins = (ssLocal - srLocal)/60000;
-      const h = Math.floor(dayMins/60), m = Math.floor(dayMins%60);
-      document.getElementById('daylightHours').textContent = `☀ ${h}h ${pad(m)}m`;
-
-      // Arc position
-      const nowLocal = new Date(now.toLocaleString('en-US',{timeZone:TZ}));
-      const totalSecs = (ssLocal-srLocal)/1000;
-      const elapsed = (nowLocal-srLocal)/1000;
-      const pct = Math.max(0,Math.min(1,elapsed/totalSecs));
-      const ax = 20 + pct*280;
-      const ay = 52 - Math.sin(pct*Math.PI)*62;
-      document.getElementById('sunDot').setAttribute('cx',ax);
-      document.getElementById('sunDot').setAttribute('cy',ay);
-
-      // Daylight bar
-      const startPct = (srLocal.getHours()*60+srLocal.getMinutes())/(24*60)*100;
-      const fillPct = (ssLocal-srLocal)/(24*60*60*1000)*100;
-      const fill = document.getElementById('daylightFill');
-      fill.style.marginLeft = startPct+'%';
-      fill.style.width = fillPct+'%';
-    }
-  }catch(e){
-    document.getElementById('sunrise').textContent='6:15';
-    document.getElementById('sunset').textContent='20:42';
-    document.getElementById('sunriseLabel').textContent='6:15';
-    document.getElementById('sunsetLabel').textContent='20:42';
-    document.getElementById('daylightHours').textContent='☀ 14h 27m';
-    document.getElementById('daylightFill').style.width='60%';
-  }
-}
-loadSun();
-
-// ---- MOON ----
-function getMoonPhase(){
-  const known = new Date(2000,0,6,18,14,0);
-  const synodicMonth = 29.53058867;
-  const diff = (now - known) / (1000*60*60*24);
-  const cycles = diff / synodicMonth;
-  const phase = (cycles - Math.floor(cycles));
-  let illumination, name, emoji;
-  const p = phase;
-  if(p < 0.0125||p >= 0.9875){illumination=0;name='Luna nueva';}
-  else if(p < 0.25){illumination=p/0.25*100;name='Luna creciente';}
-  else if(p < 0.2625){illumination=100;name='Cuarto creciente';}
-  else if(p < 0.5){illumination=(1-(p-0.25)/0.25)*50+50;name='Luna gibosa creciente';}
-  else if(p < 0.5125){illumination=100;name='Luna llena';}
-  else if(p < 0.75){illumination=(1-(p-0.5)/0.25)*50+50;name='Luna gibosa menguante';}
-  else if(p < 0.7625){illumination=50;name='Cuarto menguante';}
-  else{illumination=(1-(p-0.75)/0.25)*50;name='Luna menguante';}
-  const illum = Math.round(Math.abs(illumination));
-  const daysInCycle = Math.round(phase * synodicMonth);
-  const nextFull = Math.round((0.5-phase)*synodicMonth);
-  return {phase,illumination:illum,name,daysInCycle,nextFull:nextFull<0?nextFull+30:nextFull};
-}
-
-function drawMoon(phase,illumination){
-  const canvas = document.getElementById('moonCanvas');
-  const ctx = canvas.getContext('2d');
-  const cx=40,cy=40,r=34;
-  ctx.clearRect(0,0,80,80);
-  ctx.fillStyle='#0a1f35';
-  ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.fill();
-  const ph = phase;
-  ctx.save();
-  ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.clip();
-  if(ph<=0.5){
-    const lit = ph*4-1;
-    ctx.fillStyle='#c8d8e8';
-    ctx.beginPath();ctx.arc(cx,cy,r,Math.PI/2,3*Math.PI/2,false);ctx.closePath();ctx.fill();
-    const xScale = Math.abs(ph*4-1);
-    ctx.fillStyle = ph<0.25 ? '#0a1f35':'#c8d8e8';
-    ctx.beginPath();
-    ctx.ellipse(cx,cy,r*xScale,r,0,Math.PI/2,3*Math.PI/2,ph<0.25?false:true);
-    ctx.closePath();ctx.fill();
-  } else {
-    ctx.fillStyle='#c8d8e8';
-    ctx.beginPath();ctx.arc(cx,cy,r,3*Math.PI/2,Math.PI/2,false);ctx.closePath();ctx.fill();
-    const xScale = Math.abs((ph-0.5)*4-1);
-    ctx.fillStyle = ph<0.75 ? '#c8d8e8':'#0a1f35';
-    ctx.beginPath();
-    ctx.ellipse(cx,cy,r*xScale,r,0,3*Math.PI/2,Math.PI/2,ph<0.75?true:false);
-    ctx.closePath();ctx.fill();
-  }
-  ctx.restore();
-  ctx.strokeStyle='rgba(135,206,235,0.2)';ctx.lineWidth=0.5;
-  ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.stroke();
-  for(let i=0;i<4;i++){
-    const sx=cx+Math.random()*24-12,sy=cy+Math.random()*24-12,sr=Math.random()*2+0.5;
-    const d=Math.sqrt((sx-cx)**2+(sy-cy)**2);
-    if(d<r-2){
-      ctx.fillStyle='rgba(100,130,160,0.25)';
-      ctx.beginPath();ctx.arc(sx,sy,sr,0,Math.PI*2);ctx.fill();
-    }
-  }
-}
-
-const moon = getMoonPhase();
-drawMoon(moon.phase, moon.illumination);
-document.getElementById('moonIllum').textContent = moon.illumination+'%';
-document.getElementById('moonPhaseName').textContent = moon.name;
-document.getElementById('moonDetail').innerHTML =
-  `Día ${moon.daysInCycle} del ciclo lunar<br>Iluminación: ${moon.illumination}%`;
-
-// ---- MAREAS ----
-function calcTides(){
-  const baseDate = new Date(now.getFullYear(),now.getMonth(),now.getDate());
-  const M2 = 12.4206;
-  const S2 = 12.0;
-  const amp_M2 = 0.6, amp_S2 = 0.22;
-  const phase_M2 = moon.phase * Math.PI * 2 * 2;
-  const phase_S2 = (now.getDate() % 15) * Math.PI * 2 / 15 * 2;
-  let tides = [];
-  for(let h=0;h<24;h+=0.25){
-    const t = h;
-    const eta = amp_M2*Math.cos(2*Math.PI*t/M2 - phase_M2) +
-                amp_S2*Math.cos(2*Math.PI*t/S2 - phase_S2) + 0.8;
-    tides.push({h,eta});
-  }
-  let extremes = [];
-  for(let i=1;i<tides.length-1;i++){
-    if(tides[i].eta>tides[i-1].eta && tides[i].eta>tides[i+1].eta){
-      extremes.push({h:tides[i].h, eta:tides[i].eta, type:'alta'});
-    } else if(tides[i].eta<tides[i-1].eta && tides[i].eta<tides[i+1].eta){
-      extremes.push({h:tides[i].h, eta:tides[i].eta, type:'baja'});
-    }
-  }
-  return extremes.slice(0,6);
-}
-
-const tides = calcTides();
-const tbody = document.getElementById('tideBody');
-const nowH = now.getHours()+now.getMinutes()/60;
-tbody.innerHTML = tides.map(t=>{
-  const hh = Math.floor(t.h), mm = Math.round((t.h-hh)*60);
-  const isPast = t.h < nowH;
-  const typeClass = t.type==='alta'?'tide-high':'tide-low';
-  const typeLabel = t.type==='alta'?'↑ Pleamar':'↓ Bajamar';
-  const alphaStyle = isPast?'opacity:0.45':'';
-  return `<tr style="${alphaStyle}">
-    <td>${pad(hh)}:${pad(mm)}</td>
-    <td><span class="tide-type ${typeClass}">${typeLabel}</span></td>
-    <td>${t.eta.toFixed(2)}</td>
-  </tr>`;
-}).join('');
-
-// Progress bar
-const minH = Math.min(...tides.map(t=>t.h));
-const maxH = Math.max(...tides.map(t=>t.h));
-const prog = (nowH-minH)/(maxH-minH)*100;
-document.getElementById('tideProgress').style.width = Math.max(0,Math.min(100,prog))+'%';
-
-// ---- WIND MAP ----
-async function drawWindMap(){
-  const canvas = document.getElementById('windCanvas');
-  const W = canvas.parentElement.offsetWidth||340;
-  const H = Math.round(W*10/16);
-  canvas.width = W; canvas.height = H;
-  const ctx = canvas.getContext('2d');
-
-  // Draw Gran Canaria shape
-  ctx.fillStyle='#0a1f35';
-  ctx.fillRect(0,0,W,H);
-
-  // Ocean gradient
-  const oceanGrad = ctx.createRadialGradient(W/2,H/2,0,W/2,H/2,W/2);
-  oceanGrad.addColorStop(0,'rgba(26,90,138,0.4)');
-  oceanGrad.addColorStop(1,'rgba(10,31,53,0.8)');
-  ctx.fillStyle=oceanGrad;
-  ctx.fillRect(0,0,W,H);
-
-  // Draw island shape (simplified Gran Canaria polygon)
-  const cx=W/2, cy=H/2;
-  const iW=W*0.45, iH=H*0.68;
-  const points = [
-    [0.5,0.05],[0.72,0.12],[0.88,0.28],[0.95,0.5],[0.88,0.72],
-    [0.72,0.88],[0.5,0.95],[0.28,0.88],[0.12,0.72],[0.05,0.5],
-    [0.12,0.28],[0.28,0.12]
-  ];
-  ctx.beginPath();
-  points.forEach((p,i)=>{
-    const x = cx + (p[0]-0.5)*iW*2;
-    const y = cy + (p[1]-0.5)*iH*2;
-    if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
-  });
-  ctx.closePath();
-  const islandGrad = ctx.createLinearGradient(cx-iW,cy-iH,cx+iW,cy+iH);
-  islandGrad.addColorStop(0,'#2d5a27');
-  islandGrad.addColorStop(0.4,'#8b7355');
-  islandGrad.addColorStop(1,'#c4a46a');
-  ctx.fillStyle=islandGrad;
-  ctx.fill();
-  ctx.strokeStyle='rgba(196,168,90,0.4)';ctx.lineWidth=1;ctx.stroke();
-
-  // Las Palmas label
-  ctx.fillStyle='rgba(240,244,248,0.9)';
-  ctx.font=`bold ${Math.round(W*0.035)}px Syne,sans-serif`;
-  ctx.textAlign='center';
-  ctx.fillText('Las Palmas',cx+iW*0.35,cy-iH*0.25);
-  ctx.fillStyle='rgba(196,168,90,0.8)';
-  ctx.beginPath();ctx.arc(cx+iW*0.35,cy-iH*0.18,3,0,Math.PI*2);ctx.fill();
-
-  // Fetch wind data
-  let windSpeed=25, windDir=45, windDirName='NE', gustSpeed=38;
-  try{
-    const wr = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&current=wind_speed_10m,wind_direction_10m,wind_gusts_10m&wind_speed_unit=kmh`);
-    const wd = await wr.json();
-    if(wd.current){
-      windSpeed = Math.round(wd.current.wind_speed_10m);
-      windDir = wd.current.wind_direction_10m;
-      gustSpeed = Math.round(wd.current.wind_gusts_10m);
-      const dirs=['N','NE','E','SE','S','SO','O','NO'];
-      windDirName = dirs[Math.round(windDir/45)%8];
-    }
-  }catch(e){}
-
-  // Draw wind particles
-  const windRad = (windDir+180) * Math.PI/180;
-  const numParticles = 60;
-  for(let i=0;i<numParticles;i++){
-    const x = Math.random()*W;
-    const y = Math.random()*H;
-    const len = (windSpeed/60)*30+8;
-    const alpha = 0.2+Math.random()*0.5;
-    const dx = Math.sin(windRad)*len;
-    const dy = -Math.cos(windRad)*len;
-    const grad = ctx.createLinearGradient(x,y,x+dx,y+dy);
-    grad.addColorStop(0,'rgba(135,206,235,0)');
-    grad.addColorStop(1,`rgba(135,206,235,${alpha})`);
-    ctx.strokeStyle=grad;ctx.lineWidth=1.5;
-    ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+dx,y+dy);ctx.stroke();
-    ctx.fillStyle=`rgba(135,206,235,${alpha*0.8})`;
-    ctx.beginPath();ctx.arc(x+dx,y+dy,1.5,0,Math.PI*2);ctx.fill();
-  }
-
-  // Compass rose
-  const rX=W*0.88, rY=H*0.15, rR=H*0.12;
-  ctx.strokeStyle='rgba(196,168,90,0.5)';ctx.lineWidth=0.5;
-  ctx.beginPath();ctx.arc(rX,rY,rR,0,Math.PI*2);ctx.stroke();
-  const cDirs=['N','E','S','O'];
-  cDirs.forEach((d,i)=>{
-    const a=i*Math.PI/2-Math.PI/2;
-    ctx.fillStyle='rgba(240,244,248,0.7)';
-    ctx.font=`${Math.round(rR*0.5)}px Syne`;ctx.textAlign='center';ctx.textBaseline='middle';
-    ctx.fillText(d,rX+Math.cos(a)*rR*0.68,rY+Math.sin(a)*rR*0.68);
-  });
-  const arrowA = (windDir-180)*Math.PI/180;
-  ctx.strokeStyle='#ffd700';ctx.lineWidth=2;
-  ctx.beginPath();
-  ctx.moveTo(rX,rY);
-  ctx.lineTo(rX+Math.sin(arrowA)*rR*0.55,rY-Math.cos(arrowA)*rR*0.55);
-  ctx.stroke();
-  ctx.strokeStyle='rgba(135,206,235,0.5)';
-  ctx.beginPath();
-  ctx.moveTo(rX,rY);
-  ctx.lineTo(rX-Math.sin(arrowA)*rR*0.35,rY+Math.cos(arrowA)*rR*0.35);
-  ctx.stroke();
-
-  document.getElementById('windSpeed').textContent = `${windSpeed} km/h · Ráchas ${gustSpeed} km/h`;
-  document.getElementById('windDir').textContent = `Viento del ${windDirName} (${windDir}°)`;
-}
-drawWindMap();
+<!DOCTYPE html>
+<html class="light" lang="es">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, viewport-fit=cover" name="viewport"/>
+<title>VANITAPERAL | Maritime Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&family=Playfair+Display:wght@600;700&family=Courier+Prime&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+tailwind.config = {
+     darkMode:"class",
+     theme:{extend:{
+       colors:{
+         "error":"#ba1a1a","on-primary-fixed-variant":"#2f486a","surface-container-highest":"#e1e3e4",
+         "surface-dim":"#d9dadb","on-background":"#191c1d","surface-container-low":"#f3f4f5",
+         "surface":"#f8f9fa","on-surface-variant":"#43474e","secondary-container":"#fed65b",
+         "on-primary-container":"#6f88ad","on-error":"#ffffff","primary-fixed-dim":"#afc8f0",
+         "surface-container-high":"#e7e8e9","on-primary-fixed":"#001c3a","surface-tint":"#476083",
+         "outline-variant":"#c4c6cf","surface-container-lowest":"#ffffff","on-tertiary":"#ffffff",
+         "secondary-fixed-dim":"#e9c349","background":"#f8f9fa","primary":"#000613",
+         "inverse-surface":"#2e3132","inverse-on-surface":"#f0f1f2","surface-container":"#edeeef",
+         "primary-container":"#001f3f","surface-bright":"#f8f9fa","secondary":"#735c00",
+         "on-secondary":"#ffffff","outline":"#74777f","primary-fixed":"#d4e3ff",
+         "inverse-primary":"#afc8f0","on-error-container":"#93000a","secondary-fixed":"#ffe088",
+         "on-surface":"#191c1d","error-container":"#ffdad6","surface-variant":"#e1e3e4","on-primary":"#ffffff"
+       },
+       borderRadius:{"DEFAULT":"0.125rem","lg":"0.25rem","xl":"0.5rem","full":"0.75rem"},
+       spacing:{"gutter":"24px","base":"8px","xs":"4px","xl":"80px","sm":"12px","lg":"48px","container-max":"1440px","md":"24px"},
+       fontFamily:{"label-caps":["Montserrat"],"body-lg":["Montserrat"],"headline-lg":["Playfair Display"],
+         "headline-md":["Playfair Display"],"body-md":["Montserrat"],"headline-lg-mobile":["Playfair Display"],
+         "data-mono":["Courier Prime"],"display-lg":["Playfair Display"],"body-sm":["Montserrat"]},
+       fontSize:{
+         "label-caps":["12px",{lineHeight:"1",letterSpacing:"0.1em",fontWeight:"700"}],
+         "body-lg":["18px",{lineHeight:"1.6",fontWeight:"400"}],
+         "headline-lg":["32px",{lineHeight:"1.3",fontWeight:"700"}],
+         "headline-md":["24px",{lineHeight:"1.4",fontWeight:"600"}],
+         "body-md":["16px",{lineHeight:"1.5",fontWeight:"400"}],
+         "headline-lg-mobile":["28px",{lineHeight:"1.3",fontWeight:"700"}],
+         "data-mono":["14px",{lineHeight:"1.4",fontWeight:"400"}],
+         "display-lg":["48px",{lineHeight:"1.2",letterSpacing:"-0.02em",fontWeight:"700"}],
+         "body-sm":["14px",{lineHeight:"1.5",fontWeight:"400"}]
+       }
+     }}
+   }
 </script>
+<style>
+   .nautical-grid{background-image:radial-gradient(circle,#c4c6cf 1px,transparent 1px);background-size:24px 24px}
+   .material-symbols-outlined{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+   .tab-content{display:none}
+   .tab-content.active{display:flex;flex-direction:column;gap:1.5rem}
+   .nav-item{cursor:pointer}
+   .nav-item.active .nav-pill{background-color:#001f3f;border-radius:9999px;padding:4px 16px}
+   .nav-item.active .nav-pill .nav-icon,.nav-item.active .nav-pill .nav-label{color:#afc8f0}
+   #toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(20px);
+     background:#001f3f;color:white;padding:10px 20px;border-radius:8px;font-size:13px;
+     font-family:'Montserrat',sans-serif;opacity:0;transition:opacity .3s,transform .3s;
+     pointer-events:none;z-index:100;white-space:nowrap}
+   #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+   #notif-panel,#settings-panel{position:fixed;top:64px;right:12px;width:300px;background:white;
+     border:1px solid #c4c6cf;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.12);z-index:200;
+     transform:translateY(-10px);opacity:0;transition:opacity .2s,transform .2s;pointer-events:none}
+   #settings-panel{width:280px}
+   #notif-panel.open,#settings-panel.open{opacity:1;transform:translateY(0);pointer-events:all}
+   #compass-arrow{transform-origin:center;transition:transform 1s ease}
+   @keyframes spin-once{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+   .spin-once{animation:spin-once .5s linear}
+   @keyframes flash-update{0%{background:rgba(71,96,131,.15)}100%{background:transparent}}
+   .flash{animation:flash-update .8s ease;border-radius:4px}
+   .loading-pulse{animation:pulse 1.5s ease-in-out infinite}
+   @keyframes pulse{0%,100%{opacity:.4}50%{opacity:1}}
+   /* API key modal */
+   #api-modal{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:300;display:flex;align-items:center;justify-content:center;padding:16px}
+   #api-modal.hidden{display:none}
+   .dark body{background-color:#191c1d;color:#e1e3e4}
+   .dark .bg-surface-container-lowest{background-color:#2e3132!important;border-color:#43474e!important}
+   .dark .bg-surface-container-low{background-color:#363839!important}
+   .dark .bg-surface-container-high{background-color:#3a3c3d!important}
+   .dark #notif-panel,.dark #settings-panel{background:#2e3132;border-color:#43474e;color:#e1e3e4}
+   /* Data source badge */
+   .source-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 6px;border-radius:4px;font-size:9px;font-family:'Montserrat',sans-serif;font-weight:700;letter-spacing:.05em;text-transform:uppercase}
+   .source-live{background:#dcfce7;color:#166534}
+   .source-sim{background:#fef9c3;color:#854d0e}
+   .source-err{background:#fee2e2;color:#991b1b}
+</style>
+</head>
+<body class="bg-surface text-on-surface min-h-screen font-body-md overflow-x-hidden pb-24">
+ 
+<!-- Toast -->
+<div id="toast"></div>
+ 
+<!-- AEMET API Key Modal -->
+<div id="api-modal">
+  <div class="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full">
+    <div class="flex items-center gap-2 mb-3">
+      <span class="material-symbols-outlined text-primary-container text-3xl" style="font-variation-settings:'FILL' 1">anchor</span>
+      <h2 class="font-headline-md text-[20px] font-bold">VANITAPERAL</h2>
+    </div>
+    <p class="font-body-sm text-on-surface-variant mb-4 text-sm leading-relaxed">
+       Para obtener<strong>avisos meteorológicos reales</strong> de AEMET (Agencia Estatal de Meteorología), introduce tu API key gratuita.<br><br>
+      <a href="https://opendata.aemet.es/centrodedescargas/altaUsuarios" target="_blank" class="text-primary-container underline font-semibold">→ Obtener API key gratuita en AEMET OpenData</a>
+    </p>
+    <input id="aemet-key-input" type="text" placeholder="Pega aquí tu API key de AEMET…"
+       class="w-full border border-outline-variant rounded-lg px-3 py-2 font-data-mono text-sm mb-3 focus:outline-none focus:border-primary-container"/>
+    <div class="flex gap-2">
+      <button onclick="saveAemetKey()" class="flex-1 bg-primary-container text-white py-2 rounded-lg font-label-caps text-label-caps">
+         CONECTAR
+      </button>
+      <button onclick="skipAemetKey()" class="flex-1 border border-outline-variant text-on-surface-variant py-2 rounded-lg font-label-caps text-label-caps">
+         SIN AVISOS
+      </button>
+    </div>
+    <p class="text-[10px] text-outline mt-3 text-center">El tiempo, viento y mareas se cargan<strong>sin API key</strong> · vía Open-Meteo</p>
+  </div>
+</div>
+ 
+<!-- Notifications Panel -->
+<div id="notif-panel">
+  <div class="p-4 border-b border-outline-variant flex justify-between items-center">
+    <h3 class="font-headline-md text-[15px] font-bold">Notificaciones</h3>
+    <button onclick="closeAllPanels()"><span class="material-symbols-outlined text-[20px] text-outline">close</span></button>
+  </div>
+  <div class="p-3 space-y-2 max-h-72 overflow-y-auto" id="notif-list">
+    <p class="text-sm text-on-surface-variant text-center py-4 loading-pulse">Cargando avisos AEMET…</p>
+  </div>
+</div>
+ 
+<!-- Settings Panel -->
+<div id="settings-panel">
+  <div class="p-4 border-b border-outline-variant flex justify-between items-center">
+    <h3 class="font-headline-md text-[15px] font-bold">Ajustes</h3>
+    <button onclick="closeAllPanels()"><span class="material-symbols-outlined text-[20px] text-outline">close</span></button>
+  </div>
+  <div class="p-4 space-y-4">
+    <div class="flex items-center justify-between">
+      <span class="font-body-sm font-semibold">Modo oscuro</span>
+      <button id="dark-mode-toggle" onclick="toggleDarkMode()" class="w-12 h-6 rounded-full bg-outline-variant relative transition-colors duration-200">
+        <span class="absolute left-1 top-1 w-4 h-4 rounded-full bg-white shadow transition-transform duration-200" id="dark-toggle-dot"></span>
+      </button>
+    </div>
+    <div class="flex items-center justify-between">
+      <span class="font-body-sm font-semibold">Unidades de viento</span>
+      <select id="wind-unit" onchange="updateWindUnit()" class="text-sm border border-outline-variant rounded px-2 py-1 bg-surface font-data-mono">
+        <option value="kn">Nudos (KN)</option>
+        <option value="kmh">km/h</option>
+        <option value="ms">m/s</option>
+      </select>
+    </div>
+    <div class="pt-2 border-t border-outline-variant">
+      <p class="text-[10px] text-outline font-label-caps mb-1">AEMET API KEY</p>
+      <p class="font-data-mono text-xs text-on-surface-variant" id="aemet-key-status">No configurada</p>
+      <button onclick="resetAemetKey()" class="mt-2 text-[10px] text-error font-label-caps underline">Cambiar clave</button>
+    </div>
+    <div class="pt-2 border-t border-outline-variant">
+      <p class="text-[10px] text-outline font-label-caps">FUENTES DE DATOS</p>
+      <div class="mt-1 space-y-1">
+        <div class="flex items-center justify-between">
+          <span class="text-xs text-on-surface-variant">Meteorología</span>
+          <span class="source-badge source-live" id="src-weather">Open-Meteo</span>
+        </div>
+        <div class="flex items-center justify-between">
+          <span class="text-xs text-on-surface-variant">Oleaje</span>
+          <span class="source-badge source-live" id="src-marine">Open-Meteo Marine</span>
+        </div>
+        <div class="flex items-center justify-between">
+          <span class="text-xs text-on-surface-variant">Avisos AEMET</span>
+          <span class="source-badge source-sim" id="src-aemet">Sin configurar</span>
+        </div>
+        <div class="flex items-center justify-between">
+          <span class="text-xs text-on-surface-variant">Mareas</span>
+          <span class="source-badge source-sim">Modelo M2/S2</span>
+        </div>
+      </div>
+    </div>
+    <div class="pt-2 border-t border-outline-variant">
+      <p class="text-[10px] text-outline font-label-caps">VERSIÓN</p>
+      <p class="font-data-mono text-sm mt-1">VANITAPERAL v3.0 · API Edition</p>
+    </div>
+  </div>
+</div>
+ 
+<!-- Header -->
+<header class="fixed top-0 w-full z-50 bg-surface border-b border-outline-variant shadow-sm">
+  <div class="flex items-center justify-between px-gutter h-16 w-full max-w-container-max mx-auto">
+    <div class="flex items-center gap-2">
+      <span class="material-symbols-outlined text-primary" style="font-variation-settings:'FILL' 1">anchor</span>
+      <h1 class="font-headline-md font-bold tracking-tight text-primary">VANITAPERAL</h1>
+    </div>
+    <div class="flex items-center gap-4">
+      <div class="relative">
+        <button onclick="togglePanel('notif-panel')" class="focus:outline-none">
+          <span class="material-symbols-outlined text-on-surface-variant">notifications</span>
+          <span id="notif-badge" class="absolute -top-1 -right-1 w-4 h-4 bg-error text-white text-[9px] rounded-full hidden items-center justify-center font-bold flex">!</span>
+        </button>
+      </div>
+      <button onclick="togglePanel('settings-panel')" class="focus:outline-none">
+        <span class="material-symbols-outlined text-on-surface-variant">settings</span>
+      </button>
+    </div>
+  </div>
+</header>
+ 
+<main class="mt-20 px-4 flex flex-col gap-6 max-w-lg mx-auto">
+ 
+  <!-- TAB: Dashboard -->
+  <div id="tab-dashboard" class="tab-content active">
+ 
+    <!-- Clock -->
+    <section class="bg-primary-container text-white p-6 rounded-xl flex flex-col items-center justify-center border border-outline-variant/20 shadow-md relative overflow-hidden">
+      <div class="absolute inset-0 opacity-5 nautical-grid pointer-events-none"></div>
+      <h2 class="font-label-caps text-label-caps text-on-primary-container opacity-80 mb-2">HORA LOCAL</h2>
+      <div class="font-data-mono text-4xl tracking-widest font-bold text-white" id="clock">--:--:--</div>
+      <p class="font-body-sm mt-2 text-on-primary-container" id="clock-date">Gran Canaria (UTC+0)</p>
+      <div class="mt-3 flex items-center gap-2">
+        <span class="w-2 h-2 bg-green-400 rounded-full animate-pulse" id="online-dot"></span>
+        <span class="text-[10px] font-label-caps text-on-primary-container opacity-70" id="online-label">CARGANDO…</span>
+      </div>
+    </section>
+ 
+    <!-- Port Status -->
+    <section class="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden shadow-sm">
+      <div class="bg-primary-container p-3 flex justify-between items-center">
+        <div class="flex items-center gap-2">
+          <h2 class="text-white font-headline-md text-[18px]">Estado del Puerto</h2>
+          <span class="source-badge" id="port-source-badge" style="background:rgba(255,255,255,.15);color:rgba(255,255,255,.8)">AEMET</span>
+        </div>
+        <span id="port-status-badge" class="flex items-center gap-1 px-2 py-0.5 bg-green-500/20 text-green-400 rounded-full text-[10px] font-bold uppercase tracking-wider loading-pulse">
+          <span class="w-2 h-2 bg-green-500 rounded-full"></span> Cargando…
+        </span>
+      </div>
+      <div class="p-4 space-y-3">
+        <div id="aemet-warnings-container">
+          <div class="flex items-start gap-3 p-3 bg-surface-container-low rounded-lg border-l-4 border-outline-variant loading-pulse">
+            <span class="material-symbols-outlined text-outline pt-0.5">info</span>
+            <div>
+              <p class="font-label-caps text-label-caps text-outline">CARGANDO AVISOS AEMET</p>
+              <p class="font-body-sm text-on-surface-variant mt-1 leading-tight">Conectando con la API de AEMET…</p>
+            </div>
+          </div>
+        </div>
+        <div class="grid grid-cols-3 gap-2">
+          <div class="p-3 bg-surface-container-high rounded-lg flex flex-col">
+            <span class="text-xs text-on-surface-variant font-semibold">Viento</span>
+            <span class="text-base font-bold loading-pulse" id="port-wind">--</span>
+          </div>
+          <div class="p-3 bg-surface-container-high rounded-lg flex flex-col">
+            <span class="text-xs text-on-surface-variant font-semibold">Olas</span>
+            <span class="text-base font-bold loading-pulse" id="port-wave">--</span>
+          </div>
+          <div class="p-3 bg-surface-container-high rounded-lg flex flex-col">
+            <span class="text-xs text-on-surface-variant font-semibold">Visib.</span>
+            <span class="text-base font-bold" id="port-vis">--km</span>
+          </div>
+        </div>
+      </div>
+    </section>
+ 
+    <!-- Sun + Moon -->
+    <section class="grid grid-cols-2 gap-4">
+      <div class="bg-surface-container-lowest border border-outline-variant p-4 rounded-xl shadow-sm text-center">
+        <span class="material-symbols-outlined text-secondary mb-2" style="font-variation-settings:'FILL' 1">wb_sunny</span>
+        <p class="font-label-caps text-[10px] text-outline mb-1">AMANECER</p>
+        <p class="font-data-mono text-lg font-bold loading-pulse" id="sunrise-time">--:--</p>
+        <div class="mt-3 pt-3 border-t border-outline-variant/30">
+          <p class="font-label-caps text-[10px] text-outline mb-1">OCASO</p>
+          <p class="font-data-mono text-lg font-bold loading-pulse" id="sunset-time">--:--</p>
+        </div>
+        <div class="mt-2 pt-2 border-t border-outline-variant/30">
+          <p class="font-label-caps text-[10px] text-outline mb-1">HORAS LUZ</p>
+          <p class="font-data-mono text-sm font-bold" id="day-length">--h --m</p>
+        </div>
+        <div class="mt-1"><span class="source-badge source-live">Open-Meteo</span></div>
+      </div>
+      <div class="bg-surface-container-lowest border border-outline-variant p-4 rounded-xl shadow-sm flex flex-col items-center justify-center">
+        <span class="text-4xl mb-1" id="moon-emoji">🌕</span>
+        <p class="font-label-caps text-[10px] text-outline mb-1">FASE LUNAR</p>
+        <p class="font-body-md font-bold text-center text-sm" id="moon-phase">Calculando…</p>
+        <p class="text-[10px] text-on-surface-variant mt-1" id="moon-illum">--%</p>
+        <div class="mt-2 pt-2 border-t border-outline-variant/30 w-full text-center">
+          <p class="font-label-caps text-[10px] text-outline mb-1">PRÓX. LUNA LLENA</p>
+          <p class="font-data-mono text-xs" id="next-full-moon">--/--</p>
+        </div>
+      </div>
+    </section>
+ 
+    <!-- Tide Chart -->
+    <section class="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden shadow-sm">
+      <div class="p-4 border-b border-outline-variant flex justify-between items-center">
+        <h2 class="font-headline-md text-[18px]">Gráfica de Mareas</h2>
+        <div class="text-right">
+          <p class="font-label-caps text-[10px] text-outline">SIGUIENTE PLEAMAR</p>
+          <p class="font-data-mono font-bold text-primary loading-pulse" id="next-high-tide">--:-- · --m</p>
+        </div>
+      </div>
+      <div class="p-4 h-48 relative overflow-hidden bg-surface-container-lowest">
+        <svg id="tide-svg" class="absolute inset-0 w-full h-full p-4" preserveAspectRatio="none" viewBox="0 0 400 185">
+          <defs>
+            <linearGradient id="tideGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#476083" stop-opacity="0.3"/>
+              <stop offset="100%" stop-color="#476083" stop-opacity="0"/>
+            </linearGradient>
+          </defs>
+          <path id="tide-area" fill="url(#tideGrad)" stroke="none"/>
+          <path id="tide-path" fill="none" stroke="#476083" stroke-width="3"/>
+          <line id="tide-now-line" stroke="#001f3f" stroke-dasharray="4" stroke-width="1.5" x1="200" x2="200" y1="0" y2="160"/>
+          <circle id="tide-now-dot" cx="200" cy="80" r="5" fill="#001f3f"/>
+        </svg>
+        <div id="tide-now-label" class="absolute top-2 px-2 py-0.5 bg-primary-container text-white text-[10px] font-bold rounded-sm z-10 shadow-sm" style="left:50%;transform:translateX(-50%)">AHORA</div>
+      </div>
+    </section>
+ 
+    <!-- Wind + Map -->
+    <section class="relative bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden shadow-sm">
+      <div class="absolute top-4 left-4 z-10 bg-white/95 backdrop-blur-sm p-3 rounded-lg border border-outline-variant shadow-sm">
+        <div class="flex items-center gap-1 mb-1">
+          <h2 class="font-label-caps text-[10px] text-primary">VIENTO ACTUAL</h2>
+          <span class="source-badge source-live">Live</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="material-symbols-outlined text-secondary text-xl">air</span>
+          <span class="font-data-mono font-bold text-sm" id="wind-display">-- KN --</span>
+        </div>
+        <div class="mt-2 flex items-center gap-2">
+          <svg width="36" height="36" viewBox="0 0 36 36">
+            <circle cx="18" cy="18" r="16" fill="none" stroke="#c4c6cf" stroke-width="1"/>
+            <text x="18" y="8" text-anchor="middle" font-size="6" fill="#74777f" font-family="Montserrat">N</text>
+            <text x="18" y="32" text-anchor="middle" font-size="6" fill="#74777f" font-family="Montserrat">S</text>
+            <text x="5" y="20" text-anchor="middle" font-size="6" fill="#74777f" font-family="Montserrat">O</text>
+            <text x="31" y="20" text-anchor="middle" font-size="6" fill="#74777f" font-family="Montserrat">E</text>
+            <polygon id="compass-arrow" points="18,4 20,18 18,22 16,18" fill="#476083"/>
+          </svg>
+          <div>
+            <p class="text-[9px] text-outline font-label-caps">RÁFAGAS</p>
+            <p class="font-data-mono text-xs font-bold" id="wind-gust">-- KN</p>
+          </div>
+        </div>
+        <div class="mt-2 pt-2 border-t border-outline-variant/30">
+          <p class="text-[9px] text-outline font-label-caps">OLAS</p>
+          <p class="font-data-mono text-xs font-bold" id="wave-display">--m · --s</p>
+        </div>
+      </div>
+      <div class="h-64 bg-surface-container-highest relative">
+        <img alt="Satellite Map of Gran Canaria" class="w-full h-full object-cover grayscale-[20%]"
+           src="https://lh3.googleusercontent.com/aida/AP1WRLvSOnHj6_-lJ7jc6thoY7mzVdEpnArhP63RZJKlxaOOXdrvves64PpHMjjyfTQ7NfF2C8VprbOqlBjxukVs01LdkTE1YZnjJiUpxper-swzSqvrwE7lw1h5exJGECjqMFQ_tkswuq6jdy8OgNtMlLBNlYW22E_hT6qxHXJOsW3Ge39fiu5XOfw_XPhUCMGGxg7LyQY2uKyybiMG2l9mP3rPGtX4mMUrpQTK6vthVA9fCxJxu4WvaXedQA"/>
+        <div id="wind-arrow-1" class="absolute top-1/2 left-1/3 text-secondary animate-pulse">
+          <span class="material-symbols-outlined rotate-45">north_east</span>
+        </div>
+        <div id="wind-arrow-2" class="absolute bottom-1/4 right-1/4 text-secondary animate-pulse" style="animation-delay:1s">
+          <span class="material-symbols-outlined rotate-45">north_east</span>
+        </div>
+      </div>
+      <div class="p-3 bg-primary text-white flex items-center justify-between">
+        <span class="font-body-sm font-semibold">Gran Canaria Offshore</span>
+        <span class="text-xs opacity-70" id="map-update-time">Actualizando…</span>
+      </div>
+    </section>
+ 
+    <!-- Met Metrics -->
+    <section class="grid grid-cols-3 gap-3">
+      <div class="bg-surface-container-lowest border border-outline-variant p-4 rounded-xl shadow-sm text-center flex flex-col items-center">
+        <span class="material-symbols-outlined text-on-primary-container mb-2">visibility</span>
+        <p class="font-label-caps text-[9px] text-outline mb-1">Visibilidad</p>
+        <p class="font-data-mono text-lg font-bold loading-pulse" id="visibility-val">--km</p>
+      </div>
+      <div class="bg-surface-container-lowest border border-outline-variant p-4 rounded-xl shadow-sm text-center flex flex-col items-center">
+        <span class="material-symbols-outlined text-on-primary-container mb-2">humidity_percentage</span>
+        <p class="font-label-caps text-[9px] text-outline mb-1">Humedad</p>
+        <p class="font-data-mono text-lg font-bold loading-pulse" id="humidity-val">--%</p>
+      </div>
+      <div class="bg-surface-container-lowest border border-outline-variant p-4 rounded-xl shadow-sm text-center flex flex-col items-center">
+        <span class="material-symbols-outlined text-secondary mb-2" style="font-variation-settings:'FILL' 1">thermostat</span>
+        <p class="font-label-caps text-[9px] text-outline mb-1">Temp.</p>
+        <p class="font-data-mono text-lg font-bold loading-pulse" id="temp-val">--°C</p>
+      </div>
+    </section>
+ 
+    <!-- SOS -->
+    <button id="sos-btn" class="w-full bg-error text-on-error font-label-caps text-label-caps py-4 rounded-lg flex items-center justify-center gap-3 transition-transform active:scale-[0.97] shadow-lg">
+      <span class="material-symbols-outlined" style="font-variation-settings:'FILL' 1">emergency</span>
+       CANAL 16 - EMERGENCIA MARÍTIMA
+    </button>
+  </div>
+ 
+  <!-- TAB: Tides -->
+  <div id="tab-tides" class="tab-content">
+    <section class="bg-primary-container text-white p-5 rounded-xl shadow-md">
+      <h2 class="font-headline-md text-[20px] mb-1">Mareas · Gran Canaria</h2>
+      <p class="font-body-sm opacity-70 text-sm" id="tides-date-label">--</p>
+      <p class="text-[10px] opacity-60 mt-1">Modelo armónico M2/S2 · Puerto de La Luz</p>
+    </section>
+    <section class="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden shadow-sm">
+      <div class="p-4 border-b border-outline-variant"><h3 class="font-headline-md text-[16px]">Próximas Mareas</h3></div>
+      <div id="tide-table" class="divide-y divide-outline-variant"></div>
+    </section>
+    <section class="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden shadow-sm">
+      <div class="p-4 border-b border-outline-variant"><h3 class="font-headline-md text-[16px]">Nivel Actual del Mar</h3></div>
+      <div class="p-4 flex items-end gap-4">
+        <div class="relative w-16 h-40 bg-surface-container-high rounded-lg overflow-hidden border border-outline-variant">
+          <div id="sea-level-bar" class="absolute bottom-0 w-full bg-primary-container/80 transition-all duration-2000 rounded-b-lg" style="height:50%"></div>
+          <div class="absolute inset-0 flex items-center justify-center">
+            <span class="font-data-mono text-xs font-bold text-white mix-blend-difference" id="sea-level-pct">--</span>
+          </div>
+        </div>
+        <div>
+          <p class="font-label-caps text-[10px] text-outline mb-1">ALTURA ACTUAL</p>
+          <p class="font-data-mono text-3xl font-bold" id="current-tide-height">--.-m</p>
+          <p class="font-body-sm text-on-surface-variant text-sm mt-1" id="tide-trend">--</p>
+          <p class="font-label-caps text-[10px] text-outline mt-2 mb-1">COEF. MAREAS</p>
+          <div class="flex items-center gap-2">
+            <div class="w-24 bg-surface-container-high rounded-full h-2 overflow-hidden">
+              <div id="coef-bar" class="h-full bg-primary-container rounded-full transition-all duration-1000" style="width:0%"></div>
+            </div>
+            <span class="font-data-mono text-sm font-bold" id="coef-val">--</span>
+          </div>
+          <p class="text-[10px] text-on-surface-variant mt-1" id="coef-label">--</p>
+        </div>
+      </div>
+    </section>
+  </div>
+ 
+  <!-- TAB: Weather -->
+  <div id="tab-weather" class="tab-content">
+    <section class="bg-primary-container text-white p-5 rounded-xl shadow-md">
+      <div class="flex justify-between items-start">
+        <div>
+          <h2 class="font-headline-md text-[20px]">Gran Canaria</h2>
+          <p class="font-body-sm opacity-70 text-sm">Las Palmas · Zona Costera</p>
+          <div class="flex items-center gap-1 mt-1">
+            <span class="source-badge" style="background:rgba(255,255,255,.2);color:rgba(255,255,255,.9)">Open-Meteo · ECMWF</span>
+          </div>
+        </div>
+        <button onclick="loadWeather(true)" class="opacity-70 hover:opacity-100 transition-opacity focus:outline-none">
+          <span class="material-symbols-outlined" id="refresh-icon">refresh</span>
+        </button>
+      </div>
+      <div class="mt-4 flex items-end gap-3">
+        <span class="text-6xl" id="weather-emoji">⏳</span>
+        <div>
+          <p class="font-data-mono text-5xl font-bold loading-pulse" id="weather-temp">--°C</p>
+          <p class="font-body-sm opacity-80" id="weather-desc">Cargando…</p>
+        </div>
+      </div>
+      <div class="mt-4 grid grid-cols-3 gap-2 border-t border-white/20 pt-3">
+        <div class="text-center"><p class="text-[9px] font-label-caps opacity-60">SENSACIÓN</p><p class="font-data-mono font-bold" id="feels-like">--°C</p></div>
+        <div class="text-center"><p class="text-[9px] font-label-caps opacity-60">HUMEDAD</p><p class="font-data-mono font-bold" id="weather-humidity">--%</p></div>
+        <div class="text-center"><p class="text-[9px] font-label-caps opacity-60">PRESIÓN</p><p class="font-data-mono font-bold" id="weather-pressure">-- hPa</p></div>
+      </div>
+    </section>
+ 
+    <section class="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden shadow-sm">
+      <div class="p-4 border-b border-outline-variant"><h3 class="font-headline-md text-[16px]">Viento & Oleaje</h3></div>
+      <div class="p-4 grid grid-cols-2 gap-4">
+        <div class="text-center"><p class="font-label-caps text-[10px] text-outline mb-1">VIENTO</p><p class="font-data-mono text-2xl font-bold" id="wind-speed-detail">-- KN</p></div>
+        <div class="text-center"><p class="font-label-caps text-[10px] text-outline mb-1">DIRECCIÓN</p><p class="font-data-mono text-xl font-bold" id="wind-dir-detail">-- (--°)</p></div>
+        <div class="text-center"><p class="font-label-caps text-[10px] text-outline mb-1">RÁFAGAS</p><p class="font-data-mono text-2xl font-bold" id="wind-gust-detail">-- KN</p></div>
+        <div class="text-center"><p class="font-label-caps text-[10px] text-outline mb-1">ESTADO MAR</p><p class="font-data-mono text-lg font-bold" id="sea-state">--</p></div>
+        <div class="text-center"><p class="font-label-caps text-[10px] text-outline mb-1">ALTURA OLA</p><p class="font-data-mono text-2xl font-bold" id="wave-height-detail">--m</p></div>
+        <div class="text-center"><p class="font-label-caps text-[10px] text-outline mb-1">PERIODO OLA</p><p class="font-data-mono text-2xl font-bold" id="wave-period-detail">--s</p></div>
+      </div>
+    </section>
+ 
+    <section class="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden shadow-sm">
+      <div class="p-4 border-b border-outline-variant"><h3 class="font-headline-md text-[16px]">Previsión 7 Días</h3></div>
+      <div id="forecast-list" class="divide-y divide-outline-variant">
+        <p class="text-sm text-on-surface-variant text-center py-6 loading-pulse">Cargando previsión…</p>
+      </div>
+    </section>
+ 
+    <section class="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden shadow-sm">
+      <div class="p-4 border-b border-outline-variant"><h3 class="font-headline-md text-[16px]">UV & Amanecer</h3></div>
+      <div class="p-4 grid grid-cols-2 gap-4">
+        <div>
+          <p class="font-label-caps text-[10px] text-outline mb-2">ÍNDICE UV</p>
+          <div class="flex items-center gap-2">
+            <div class="flex-1 h-3 rounded-full overflow-hidden" style="background:linear-gradient(to right,#22c55e,#eab308,#ef4444)">
+              <div id="uv-marker" class="h-full w-1 bg-white/80 rounded-full shadow" style="margin-left:35%"></div>
+            </div>
+          </div>
+          <p class="font-data-mono text-lg font-bold mt-1" id="uv-val">--<span class="text-sm font-normal text-on-surface-variant" id="uv-label">--</span></p>
+        </div>
+        <div>
+          <p class="font-label-caps text-[10px] text-outline mb-1">AMANECER</p>
+          <p class="font-data-mono text-lg font-bold" id="weather-sunrise">--:--</p>
+          <p class="font-label-caps text-[10px] text-outline mb-1 mt-2">OCASO</p>
+          <p class="font-data-mono text-lg font-bold" id="weather-sunset">--:--</p>
+        </div>
+      </div>
+    </section>
+  </div>
+ 
+</main>
+ 
+<!-- Bottom Nav -->
+<nav class="fixed bottom-0 w-full z-50 bg-surface border-t border-outline-variant shadow-lg rounded-t-xl">
+  <div class="flex justify-around items-center h-20 px-4 w-full">
+    <div class="nav-item active flex flex-col items-center justify-center transition-transform duration-150 active:scale-95" onclick="switchTab('dashboard',this)">
+      <div class="nav-pill flex flex-col items-center">
+        <span class="material-symbols-outlined nav-icon">dashboard</span>
+        <span class="font-label-caps text-[10px] mt-0.5 nav-label">Dashboard</span>
+      </div>
+    </div>
+    <div class="nav-item flex flex-col items-center justify-center text-on-surface-variant transition-transform duration-150 active:scale-95" onclick="switchTab('tides',this)">
+      <div class="nav-pill flex flex-col items-center">
+        <span class="material-symbols-outlined nav-icon">waves</span>
+        <span class="font-label-caps text-[10px] mt-0.5 nav-label">Tides</span>
+      </div>
+    </div>
+    <div class="nav-item flex flex-col items-center justify-center text-on-surface-variant transition-transform duration-150 active:scale-95" onclick="switchTab('weather',this)">
+      <div class="nav-pill flex flex-col items-center">
+        <span class="material-symbols-outlined nav-icon">wb_sunny</span>
+        <span class="font-label-caps text-[10px] mt-0.5 nav-label">Weather</span>
+      </div>
+    </div>
+  </div>
+</nav>
+ 
+<script>
+ /* ============================================================
+    VANITAPERAL v3.0 — API Edition
+    Fuentes reales:
+      • Open-Meteo Forecast API  → meteorología, viento, UV, previsión
+      • Open-Meteo Marine API    → oleaje, altura de ola, periodo
+      • AEMET OpenData API       → avisos meteorológicos Canarias (requiere key)
+    Mareas: modelo armónico M2/S2 (sin API pública gratuita)
+    ============================================================ */
+ 
+ // ---- Coordenadas Gran Canaria / Puerto de La Luz ----
+ const LAT = 28.15, LON = -15.42;
+ 
+ // ---- Estado global ----
+ const state = {
+   windKnots: null, windDeg: null, windGustKnots: null,
+   waveHeight: null, wavePeriod: null, waveDir: null,
+   temp: null, humidity: null, pressure: null, uv: null,
+   visibility: null, sunrise: null, sunset: null,
+   windUnit: 'kn',
+   aemetKey: localStorage.getItem('vanitaperal_aemet_key') || null,
+   darkMode: false,
+   lastUpdate: null,
+ };
+ 
+ // ============================================================
+ // UTILIDADES
+ // ============================================================
+ function showToast(msg, dur=2500){
+   const t=document.getElementById('toast');
+   t.textContent=msg; t.classList.add('show');
+   setTimeout(()=>t.classList.remove('show'),dur);
+ }
+ function flashEl(el){
+  el.classList.remove('flash');
+  void el.offsetWidth;
+  el.classList.add('flash');
+}
+ function closeAllPanels(){
+   document.getElementById('notif-panel').classList.remove('open');
+   document.getElementById('settings-panel').classList.remove('open');
+ }
+ function togglePanel(id){
+   const p=document.getElementById(id);
+   const o=id==='notif-panel'?'settings-panel':'notif-panel';
+   document.getElementById(o).classList.remove('open');
+   p.classList.toggle('open');
+ }
+document.addEventListener('click', e => {
+   // Comprobamos si el clic NO es en los paneles
+   const isPanel = e.target.closest('#notif-panel') || e.target.closest('#settings-panel');
+   // Comprobamos si el clic NO es en el botón de abrir
+   const isToggle = e.target.closest('button[onclick*="togglePanel"]');
+   
+   if (!isPanel && !isToggle) {
+       closeAllPanels();
+   }
+});
+ 
+ function windConvert(kn){ return state.windUnit==='kmh'?(kn*1.852).toFixed(1):state.windUnit==='ms'?(kn*0.5144).toFixed(1):kn.toFixed(1) }
+ function windLabel(){ return {kn:'KN',kmh:'km/h',ms:'m/s'}[state.windUnit] }
+ function degToCard(d){
+   const dirs=['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSO','SO','OSO','O','ONO','NO','NNO'];
+   return dirs[Math.round(d/22.5)%16];
+ }
+ function wmoToEmoji(code){
+   if(code===0) return{e:'☀️',d:'Despejado'};
+   if(code<=2) return{e:'⛅',d:'Parcialmente nublado'};
+   if(code===3) return{e:'☁️',d:'Nublado'};
+   if(code<=49) return{e:'🌫️',d:'Niebla'};
+   if(code<=59) return{e:'🌦️',d:'Llovizna'};
+   if(code<=69) return{e:'🌧️',d:'Lluvia'};
+   if(code<=79) return{e:'❄️',d:'Nieve'};
+   if(code<=82) return{e:'🌦️',d:'Chubascos'};
+   if(code<=99) return{e:'⛈️',d:'Tormenta'};
+   return{e:'🌡️',d:'Desconocido'};
+ }
+ function seaState(kn){
+   const s=[[0,3,'Calma'],[3,7,'Rizada'],[7,12,'Marejadilla'],[12,18,'Marejada'],
+     [18,25,'Fuerte Marejada'],[25,35,'Temporal'],[35,999,'Gran Temporal']];
+   return (s.find(x=>kn>=x[0] || kn<x[1])||s[6])[2];
+ }
+ 
+ // ============================================================
+ // RELOJ
+ // ============================================================
+ function updateClock(){
+   const now=new Date();
+   const pad=n=>String(n).padStart(2,'0');
+   document.getElementById('clock').textContent=`${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+   const days=['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
+   const months=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+   document.getElementById('clock-date').textContent=
+     `${days[now.getDay()]}, ${now.getDate()} ${months[now.getMonth()]} · Gran Canaria`;
+ }
+ setInterval(updateClock,1000); updateClock();
+ 
+ // ============================================================
+ // AEMET API KEY MODAL
+ // ============================================================
+ function initModal(){
+   if(state.aemetKey===null){
+     document.getElementById('api-modal').classList.remove('hidden');
+   } else {
+     document.getElementById('api-modal').classList.add('hidden');
+     updateAemetStatus();
+     loadAemetWarnings();
+   }
+ }
+ function saveAemetKey(){
+   const k=document.getElementById('aemet-key-input').value.trim();
+   if(!k){showToast('Introduce una API key válida');return;}
+   state.aemetKey=k;
+   localStorage.setItem('vanitaperal_aemet_key',k);
+   document.getElementById('api-modal').classList.add('hidden');
+   updateAemetStatus();
+   loadAemetWarnings();
+   showToast('✅ Clave AEMET guardada');
+ }
+ function skipAemetKey(){
+   state.aemetKey='';
+   localStorage.setItem('vanitaperal_aemet_key','');
+   document.getElementById('api-modal').classList.add('hidden');
+   showPortNoKey();
+ }
+ function resetAemetKey(){
+   localStorage.removeItem('vanitaperal_aemet_key');
+   state.aemetKey=null;
+   document.getElementById('api-modal').classList.remove('hidden');
+   closeAllPanels();
+ }
+ function updateAemetStatus(){
+   const el=document.getElementById('aemet-key-status');
+   const badge=document.getElementById('src-aemet');
+   if(state.aemetKey){
+     el.textContent='Configurada ✓';
+     badge.textContent='AEMET Live';
+     badge.className='source-badge source-live';
+   } else {
+     el.textContent='No configurada';
+     badge.textContent='Sin clave';
+     badge.className='source-badge source-sim';
+   }
+ }
+ function showPortNoKey(){
+   document.getElementById('aemet-warnings-container').innerHTML=`
+    <div class="flex items-start gap-3 p-3 bg-surface-container-low rounded-lg border-l-4 border-outline-variant">
+      <span class="material-symbols-outlined text-outline pt-0.5">info</span>
+      <div>
+        <p class="font-label-caps text-label-caps text-outline">SIN CLAVE AEMET</p>
+        <p class="font-body-sm text-on-surface-variant mt-1 leading-tight">
+           Configura tu API key gratuita en Ajustes para ver avisos oficiales.
+        </p>
+      </div>
+    </div>`;
+   document.getElementById('port-status-badge').innerHTML=`
+    <span class="w-2 h-2 bg-outline rounded-full"></span> Sin datos`;
+   document.getElementById('port-status-badge').className='flex items-center gap-1 px-2 py-0.5 bg-outline/20 text-outline rounded-full text-[10px] font-bold uppercase tracking-wider';
+ }
+ 
+ // ============================================================
+ // AEMET — Avisos Canarias (zona 60 = Canarias)
+ // AEMET requiere CORS proxy porque no permite peticiones directas desde browser
+ // Usamos el endpoint de avisos CAP
+ // ============================================================
+ async function loadAemetWarnings() {
+   if (!state.aemetKey) { showPortNoKey(); return; }
+
+   const container = document.getElementById('aemet-warnings-container');
+   const notifList = document.getElementById('notif-list');
+   const badge = document.getElementById('notif-badge');
+
+   try {
+     // Primer paso: obtener URL de datos
+     const metaRes = await fetch(
+       `https://opendata.aemet.es/opendata/api/avisos_cap/ultimoelaborado/area/61?api_key=${state.aemetKey}`,
+       { headers: { 'Accept': 'application/json' } }
+     );
+     
+     const meta = await metaRes.json();
+
+     // CORRECCIÓN: Validamos que el estado sea estrictamente 200
+     // Si la API devuelve un error (ej. 401 o 404), 'estado' no será 200
+     if (meta.estado !== 200) {
+       throw new Error(meta.descripcion || 'Error AEMET');
+     }
+
+     // Si el estado es 200 pero no hay URL de datos, salimos amablemente
+     if (!meta.datos) {
+       renderNoWarnings(container, notifList);
+       return;
+     }
+
+     // Segundo paso: descargar datos reales (XML)
+     const dataRes = await fetch(meta.datos);
+     const text = await dataRes.text();
+
+     const parser = new DOMParser();
+     const xml = parser.parseFromString(text, 'text/xml');
+     const alerts = xml.querySelectorAll('alert');
+
+     if (alerts.length === 0) {
+       renderNoWarnings(container, notifList);
+       updatePortGood();
+       return;
+     }
+
+     let warningCards = '';
+     let notifCards = '';
+     let count = 0;
+
+     alerts.forEach(alert => {
+       const info = alert.querySelector('info');
+       if (!info) return;
+       const headline = info.querySelector('headline')?.textContent || '';
+       const description = info.querySelector('description')?.textContent || '';
+       const severity = info.querySelector('severity')?.textContent || 'Minor';
+       const event = info.querySelector('event')?.textContent || '';
+       const onset = info.querySelector('onset')?.textContent || '';
+
+       count++;
+
+       const colors = {
+         'Extreme': 'border-error bg-red-50',
+         'Severe': 'border-error bg-red-50',
+         'Moderate': 'border-secondary bg-yellow-50',
+         'Minor': 'border-on-primary-container bg-blue-50'
+       };
+       const textColors = {
+         'Extreme': 'text-error',
+         'Severe': 'text-error',
+         'Moderate': 'text-secondary',
+         'Minor': 'text-on-primary-container'
+       };
+       
+       const colorClass = colors[severity] || colors['Minor'];
+       const textClass = textColors[severity] || textColors['Minor'];
+       const onsetDate = onset ? new Date(onset).toLocaleString('es-ES', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '';
+
+       warningCards += `
+        <div class="flex items-start gap-3 p-3 rounded-lg border-l-4 ${colorClass}">
+          <span class="material-symbols-outlined ${textClass} pt-0.5" style="font-variation-settings:'FILL' 1">warning</span>
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-2 flex-wrap">
+              <p class="font-label-caps text-label-caps ${textClass}">${severity.toUpperCase()} · ${event}</p>
+            </div>
+            <p class="font-body-sm text-on-surface-variant mt-1 leading-tight text-xs">${description.substring(0, 160)}${description.length > 160 ? '…' : ''}</p>
+             ${onsetDate ? `<p class="text-[9px] text-outline mt-1">Desde: ${onsetDate}</p>` : ''}
+          </div>
+        </div>`;
+
+       notifCards += `
+        <div class="p-3 bg-surface-container-low rounded-lg border-l-4 ${colorClass.split(' ')[0]}">
+          <p class="font-label-caps text-[10px] ${textClass}">${severity.toUpperCase()} · AEMET</p>
+          <p class="font-body-sm text-on-surface-variant mt-1 text-sm">${headline || event}</p>
+           ${onsetDate ? `<p class="text-[10px] text-outline mt-1">${onsetDate}</p>` : ''}
+        </div>`;
+     });
+
+     container.innerHTML = warningCards;
+     notifList.innerHTML = notifCards;
+     badge.style.display = 'flex';
+     badge.textContent = count;
+     badge.classList.remove('hidden');
+     
+     document.getElementById('src-aemet').textContent = `AEMET · ${count} avisos`;
+     document.getElementById('src-aemet').className = 'source-badge source-err';
+
+     updatePortStatus(count > 0 ? 'warning' : 'open');
+
+   } catch (err) {
+     console.error('AEMET error:', err);
+     loadAemetCoastalFallback();
+   }
+}
+ 
+ async function loadAemetCoastalFallback(){
+   // Fallback: predicción marítima costera de Canarias
+   // Este endpoint retorna texto plano con la predicción
+   try {
+     const metaRes = await fetch(
+       `https://opendata.aemet.es/opendata/api/prediccion/maritima/costera/costa/46?api_key=${state.aemetKey}`,
+       {headers:{'Accept':'application/json'}}
+     );
+     const meta = await metaRes.json();
+     if(!meta.datos) throw new Error('No data URL');
+ 
+     const dataRes = await fetch(meta.datos);
+     const json = await dataRes.json();
+ 
+     const container = document.getElementById('aemet-warnings-container');
+     const notifList = document.getElementById('notif-list');
+ 
+     if(json  ||  json[0]){
+       const pred = json[0];
+       const texto = pred.texto || pred.prediccion || JSON.stringify(pred).substring(0,200);
+ 
+       container.innerHTML = `
+        <div class="flex items-start gap-3 p-3 bg-surface-container-low rounded-lg border-l-4 border-on-primary-container">
+          <span class="material-symbols-outlined text-on-primary-container pt-0.5" style="font-variation-settings:'FILL' 1">sailing</span>
+          <div>
+            <p class="font-label-caps text-label-caps text-on-primary-container">PREDICCIÓN COSTERA AEMET</p>
+            <p class="font-body-sm text-on-surface-variant mt-1 leading-tight text-xs">${typeof texto === 'string' ? texto.substring(0,300) : 'Predicción disponible'}</p>
+            <p class="text-[9px] text-outline mt-1">Fuente: AEMET OpenData</p>
+          </div>
+        </div>`;
+ 
+       notifList.innerHTML = `
+        <div class="p-3 bg-surface-container-low rounded-lg border-l-4 border-on-primary-container">
+          <p class="font-label-caps text-[10px] text-on-primary-container">PREDICCIÓN COSTERA · AEMET</p>
+          <p class="font-body-sm text-on-surface-variant mt-1 text-sm">Canarias Gran Canaria</p>
+          <p class="text-[10px] text-outline mt-1">Actualizado</p>
+        </div>`;
+ 
+       document.getElementById('src-aemet').textContent = 'AEMET Live';
+       document.getElementById('src-aemet').className = 'source-badge source-live';
+       updatePortGood();
+     }
+   } catch(err2) {
+     console.error('AEMET fallback error:', err2);
+     renderAemetError();
+   }
+ }
+ 
+ function renderNoWarnings(container, notifList){
+   container.innerHTML = `
+    <div class="flex items-start gap-3 p-3 bg-green-50 rounded-lg border-l-4 border-green-500">
+      <span class="material-symbols-outlined text-green-600 pt-0.5" style="font-variation-settings:'FILL' 1">check_circle</span>
+      <div>
+        <p class="font-label-caps text-label-caps text-green-700">SIN AVISOS ACTIVOS · AEMET</p>
+        <p class="font-body-sm text-on-surface-variant mt-1 leading-tight">No hay avisos meteorológicos activos para Canarias.</p>
+        <p class="text-[9px] text-outline mt-1">Fuente: AEMET OpenData · ${new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'})}</p>
+      </div>
+    </div>`;
+   notifList.innerHTML = `
+    <div class="p-4 text-center">
+      <span class="material-symbols-outlined text-green-500 text-4xl block mb-2">check_circle</span>
+      <p class="font-body-sm text-on-surface-variant">Sin avisos activos en Canarias</p>
+    </div>`;
+   document.getElementById('notif-badge').classList.add('hidden');
+   document.getElementById('src-aemet').textContent = 'AEMET · Sin avisos';
+   document.getElementById('src-aemet').className = 'source-badge source-live';
+ }
+ 
+ function renderAemetError(){
+   document.getElementById('aemet-warnings-container').innerHTML = `
+    <div class="flex items-start gap-3 p-3 bg-surface-container-low rounded-lg border-l-4 border-outline-variant">
+      <span class="material-symbols-outlined text-outline pt-0.5">wifi_off</span>
+      <div>
+        <p class="font-label-caps text-label-caps text-outline">AEMET NO DISPONIBLE</p>
+        <p class="font-body-sm text-on-surface-variant mt-1 leading-tight text-xs">
+           No se pudo conectar. Comprueba tu API key en Ajustes o visita
+          <a href="https://www.aemet.es" target="_blank" class="underline">aemet.es</a> directamente.
+        </p>
+      </div>
+    </div>`;
+   document.getElementById('src-aemet').textContent = 'AEMET · Error';
+   document.getElementById('src-aemet').className = 'source-badge source-err';
+   updatePortStatus('unknown');
+ }
+ 
+ function updatePortGood(){
+   const badge = document.getElementById('port-status-badge');
+   badge.innerHTML = '<span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span> Abierto';
+   badge.className = 'flex items-center gap-1 px-2 py-0.5 bg-green-500/20 text-green-400 rounded-full text-[10px] font-bold uppercase tracking-wider';
+ }
+ function updatePortStatus(status){
+   const badge = document.getElementById('port-status-badge');
+   if(status === 'warning'){
+     badge.innerHTML = '<span class="w-2 h-2 bg-yellow-500 rounded-full animate-pulse"></span> Avisos activos';
+     badge.className = 'flex items-center gap-1 px-2 py-0.5 bg-yellow-500/20 text-yellow-600 rounded-full text-[10px] font-bold uppercase tracking-wider';
+   } else if(status === 'open'){
+     updatePortGood();
+   } else {
+     badge.innerHTML = '<span class="w-2 h-2 bg-outline rounded-full"></span> Sin datos';
+     badge.className = 'flex items-center gap-1 px-2 py-0.5 bg-outline/20 text-outline rounded-full text-[10px] font-bold uppercase tracking-wider';
+   }
+ }
+ 
+ // ============================================================
+ // OPEN-METEO — Meteorología + Viento + UV + Previsión
+ // https://api.open-meteo.com/v1/forecast
+ // Sin API key, sin CORS issues
+ // ============================================================
+ async function loadWeather(showSpinner=false){
+   if(showSpinner){
+     const icon=document.getElementById('refresh-icon');
+     icon.classList.add('spin-once');
+     setTimeout(()=>icon.classList.remove('spin-once'),500);
+   }
+   try {
+     const url = `https://api.open-meteo.com/v1/forecast?`+
+       `latitude=${LAT}&longitude=${LON}`+
+       `&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,`+
+       `pressure_msl,visibility,wind_speed_10m,wind_direction_10m,wind_gusts_10m,uv_index`+
+       `&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,uv_index_max,`+
+       `precipitation_probability_max,wind_speed_10m_max,wind_direction_10m_dominant`+
+       `&wind_speed_unit=kn`+
+       `&timezone=Atlantic%2FCanary`+
+       `&forecast_days=7`;
+ 
+     const res = await fetch(url);
+     const data = await res.json();
+     const cur = data.current;
+ 
+     // Store state
+     state.windKnots = cur.wind_speed_10m;
+     state.windDeg = cur.wind_direction_10m;
+     state.windGustKnots = cur.wind_gusts_10m;
+     state.temp = cur.temperature_2m;
+     state.humidity = cur.relative_humidity_2m;
+     state.pressure = Math.round(cur.pressure_msl);
+     state.uv = cur.uv_index;
+     state.visibility = cur.visibility ? (cur.visibility/1000).toFixed(0) : '--';
+     state.sunrise = data.daily.sunrise[0]?.split('T')[1] || '--:--';
+     state.sunset = data.daily.sunset[0]?.split('T')[1] || '--:--';
+     state.lastUpdate = new Date();
+ 
+     const wmo = wmoToEmoji(cur.weather_code);
+ 
+     // Dashboard
+     document.getElementById('wind-display').textContent = `${windConvert(state.windKnots)} ${windLabel()} ${degToCard(state.windDeg)}`;
+     document.getElementById('wind-gust').textContent = `${windConvert(state.windGustKnots)} ${windLabel()}`;
+     document.getElementById('compass-arrow').style.transform = `rotate(${state.windDeg}deg)`;
+     document.getElementById('humidity-val').textContent = `${state.humidity}%`;
+     document.getElementById('temp-val').textContent = `${Math.round(state.temp)}°C`;
+     document.getElementById('visibility-val').textContent = `${state.visibility}km`;
+     document.getElementById('sunrise-time').textContent = state.sunrise;
+     document.getElementById('sunset-time').textContent = state.sunset;
+     document.getElementById('weather-sunrise').textContent = state.sunrise;
+     document.getElementById('weather-sunset').textContent = state.sunset;
+ 
+     // Day length
+     if(state.sunrise !== '--:--'  ||  state.sunset !== '--:--'){
+       const [rh,rm] = state.sunrise.split(':').map(Number);
+       const [sh,sm] = state.sunset.split(':').map(Number);
+       const totalMin = (sh*60+sm)-(rh*60+rm);
+       document.getElementById('day-length').textContent = `${Math.floor(totalMin/60)}h ${totalMin%60}m`;
+     }
+ 
+     // Port wind metric
+     document.getElementById('port-wind').textContent = `${windConvert(state.windKnots)} ${windLabel()}`;
+     document.getElementById('port-wind').classList.remove('loading-pulse');
+     document.getElementById('port-vis').textContent = `${state.visibility}km`;
+ 
+     // Weather tab
+     document.getElementById('weather-temp').textContent = `${Math.round(state.temp)}°C`;
+     document.getElementById('weather-temp').classList.remove('loading-pulse');
+     document.getElementById('weather-emoji').textContent = wmo.e;
+     document.getElementById('weather-desc').textContent = wmo.d;
+     document.getElementById('feels-like').textContent = `${Math.round(cur.apparent_temperature)}°C`;
+     document.getElementById('weather-humidity').textContent = `${state.humidity}%`;
+     document.getElementById('weather-pressure').textContent = `${state.pressure} hPa`;
+     document.getElementById('wind-speed-detail').textContent = `${windConvert(state.windKnots)} ${windLabel()}`;
+     document.getElementById('wind-dir-detail').textContent = `${degToCard(state.windDeg)} (${Math.round(state.windDeg)}°)`;
+     document.getElementById('wind-gust-detail').textContent = `${windConvert(state.windGustKnots)} ${windLabel()}`;
+     document.getElementById('sea-state').textContent = seaState(state.windKnots);
+ 
+     // UV
+     const uvVal = Math.round(state.uv);
+     const uvLabels = ['Bajo','Bajo','Bajo','Moderado','Moderado','Moderado','Alto','Alto','Muy alto','Muy alto','Extremo'];
+     document.getElementById('uv-val').innerHTML = `${uvVal}<span class="text-sm font-normal text-on-surface-variant">${uvLabels[Math.min(uvVal,10)]}</span>`;
+     document.getElementById('uv-marker').style.marginLeft = `${Math.min(95,uvVal*9)}%`;
+ 
+     // Map update time
+     document.getElementById('map-update-time').textContent = `Actualizado ${state.lastUpdate.toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'})}`;
+     document.getElementById('online-label').textContent = 'EN LÍNEA · LIVE';
+ 
+     // Forecast
+     buildForecast(data.daily);
+ 
+     // Remove loading pulse from all elements
+     document.querySelectorAll('.loading-pulse').forEach(el => el.classList.remove('loading-pulse'));
+ 
+   } catch(err) {
+     console.error('Open-Meteo weather error:', err);
+     document.getElementById('weather-desc').textContent = 'Error al cargar datos';
+     document.getElementById('online-label').textContent = 'SIN CONEXIÓN';
+     showToast('⚠️ Error cargando meteorología');
+   }
+ }
+ 
+ // ============================================================
+ // OPEN-METEO MARINE — Oleaje
+ // https://marine-api.open-meteo.com/v1/marine
+ // ============================================================
+ async function loadMarine(){
+   try {
+     const url = `https://marine-api.open-meteo.com/v1/marine?`+
+       `latitude=${LAT}&longitude=${LON}`+
+       `&current=wave_height,wave_period,wave_direction,wind_wave_height,swell_wave_height`+
+       `&hourly=wave_height,wave_period,wave_direction`+
+       `&forecast_days=1`;
+ 
+     const res = await fetch(url);
+     const data = await res.json();
+     const cur = data.current;
+ 
+     state.waveHeight = cur.wave_height;
+     state.wavePeriod = cur.wave_period;
+     state.waveDir = cur.wave_direction;
+ 
+     const wh = state.waveHeight?.toFixed(1) ?? '--';
+     const wp = state.wavePeriod?.toFixed(0) ?? '--';
+     const wd = state.waveDir ? degToCard(state.waveDir) : '--';
+ 
+     document.getElementById('wave-display').textContent = `${wh}m · ${wp}s`;
+     document.getElementById('wave-height-detail').textContent = `${wh}m`;
+     document.getElementById('wave-period-detail').textContent = `${wp}s`;
+     document.getElementById('port-wave').textContent = `${wh}m`;
+     document.getElementById('port-wave').classList.remove('loading-pulse');
+ 
+     // Port wave: assess conditions
+     const waveNum = parseFloat(wh);
+     if(!isNaN(waveNum)  ||  waveNum > 2.5){
+       // High waves — update port status (only if no AEMET warnings overrode)
+       const badge = document.getElementById('port-status-badge');
+       if(badge.textContent.includes('Abierto') || badge.textContent.includes('Cargando')){
+         updatePortStatus('warning');
+         document.getElementById('aemet-warnings-container').innerHTML += `
+          <div class="flex items-start gap-3 p-3 bg-orange-50 rounded-lg border-l-4 border-orange-400 mt-2">
+            <span class="material-symbols-outlined text-orange-600 pt-0.5" style="font-variation-settings:'FILL' 1">waves</span>
+            <div>
+              <p class="font-label-caps text-label-caps text-orange-700">OLEAJE ELEVADO</p>
+              <p class="font-body-sm text-on-surface-variant mt-1 leading-tight text-xs">Altura de ola actual: ${wh}m. Se recomienda precaución en maniobras portuarias.</p>
+              <p class="text-[9px] text-outline mt-1">Fuente: Open-Meteo Marine</p>
+            </div>
+          </div>`;
+       }
+     }
+ 
+   } catch(err){
+     console.error('Open-Meteo Marine error:', err);
+     document.getElementById('wave-display').textContent = 'Sin datos';
+     document.getElementById('wave-height-detail').textContent = '--m';
+     document.getElementById('wave-period-detail').textContent = '--s';
+     document.getElementById('port-wave').textContent = '--';
+   }
+ }
+
+ function populateTideTable() {
+    const table = document.getElementById('tide-table');
+    table.innerHTML = ''; // Limpiar antes de llenar
+
+    // Generar 4 registros ficticios (o reales si tienes la función de predicción)
+    for (let i = 0; i < 4; i++) {
+        const row = document.createElement('div');
+        row.className = "flex justify-between p-4";
+        row.innerHTML = `
+            <span class="font-data-mono text-sm">${i % 2 === 0 ? 'PLEAMAR' : 'BAJAMAR'}</span>
+            <span class="font-data-mono text-sm font-bold">${(6 + (i * 6)).toString().padStart(2, '0')}:00</span>
+            <span class="font-data-mono text-sm text-primary">${i % 2 === 0 ? '2.45m' : '0.45m'}</span>
+        `;
+        table.appendChild(row);
+    }
+}
+ 
+ // ============================================================
+ // PREVISIÓN 7 DÍAS
+ // ============================================================
+ function buildForecast(daily){
+   const days=['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+   const el=document.getElementById('forecast-list');
+   el.innerHTML='';
+   for(let i=0;i<Math.min(7,daily.time.length);i++){
+     const d=new Date(daily.time[i]+'T12:00:00');
+     const wmo=wmoToEmoji(daily.weather_code[i]);
+     const label=i===0?'Hoy':i===1?'Mañana':days[d.getDay()];
+     const div=document.createElement('div');
+     div.className='flex items-center justify-between p-4';
+     const precip=daily.precipitation_probability_max[i]??0;
+     const precipHtml=precip>20?`<span class="text-[10px] text-on-primary-container ml-1">💧${precip}%</span>`:'';
+     div.innerHTML=`
+      <span class="font-body-sm font-semibold w-14 text-sm">${label}</span>
+      <span class="text-xl">${wmo.e}</span>
+      <span class="font-body-sm text-on-surface-variant text-xs flex-1 ml-2">${wmo.d}${precipHtml}</span>
+      <span class="font-data-mono text-sm font-bold">${Math.round(daily.temperature_2m_min[i])}°/${Math.round(daily.temperature_2m_max[i])}°</span>`;
+     el.appendChild(div);
+   }
+ }
+ 
+ // ============================================================
+ // MAREAS — Modelo M2/S2 (no hay API libre para España)
+ // Calibrado para Puerto de Las Palmas
+ // ============================================================
+ function getTideHeight(date){
+   const h=date.getHours()+date.getMinutes()/60+date.getSeconds()/3600;
+   const M2=Math.cos(2*Math.PI*h/12.42);
+   const S2=0.3*Math.cos(2*Math.PI*h/12.0);
+   const K1=0.1*Math.cos(2*Math.PI*h/23.93);
+   return +(1.35+1.05*M2+0.3*S2+0.1*K1).toFixed(3);
+ }
+
+ function buildTideSVG() {
+    const now = new Date();
+    const points = [], areaPoints = [];
+    const W = 400, H = 160;
+
+    // Cálculo de puntos
+    for (let i = 0; i <= 200; i++) {
+        const t = new Date(now); t.setHours(0, 0, 0, 0); t.setMinutes(i * (24 * 60) / 200);
+        const h = getTideHeight(t);
+        const x = (i / 200) * W;
+        const y = 140 - (h / 3.0) * 120; // Ajustado para dejar margen abajo
+        points.push(`${x},${y}`);
+        areaPoints.push(`${x},${y}`);
+    }
+
+    const svg = document.querySelector('#tide-svg');
+    const oldAxes = svg.querySelector('.axes');
+    if (oldAxes) oldAxes.remove();
+
+    const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+    g.setAttribute("class", "axes");
+    g.style.fill = "#888";
+    g.style.fontSize = "10px";
+
+    // Eje Y (Alturas) - Dibujamos a la izquierda
+    for (let h = 0; h <= 3; h++) {
+        const y = 140 - (h / 3.0) * 120;
+        const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+        line.setAttribute("x1", "0"); line.setAttribute("y1", y);
+        line.setAttribute("x2", W); line.setAttribute("y2", y);
+        line.setAttribute("stroke", "#eee");
+        g.appendChild(line);
+
+        const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        text.setAttribute("x", "5"); text.setAttribute("y", y - 5);
+        text.textContent = h + "m";
+        g.appendChild(text);
+    }
+
+    // Eje X (Horas) - Dibujamos abajo
+    for (let h = 0; h <= 24; h += 4) {
+        const x = (h / 24) * W;
+        const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        text.setAttribute("x", x);
+        text.setAttribute("y", "170"); // Bajado ligeramente a 170
+        text.setAttribute("text-anchor", "middle");
+        text.style.fill = "#888";
+        text.style.fontSize = "12px"; // Un poco más grande para asegurar visibilidad
+        text.textContent = h + "h";
+        g.appendChild(text);
+    }
+    
+    svg.appendChild(g);
+
+    // Actualizar rutas
+    document.getElementById('tide-path').setAttribute('d', 'M ' + points.join(' L '));
+    document.getElementById('tide-area').setAttribute('d', 'M 0,160 L ' + areaPoints.join(' L ') + ' L 400,160 Z');
+
+    // Punto AHORA
+    const nowH = now.getHours() + now.getMinutes() / 60;
+    const nowX = (nowH / 24) * W;
+    const nowY = 140 - (getTideHeight(now) / 3.0) * 120;
+    const currentH = getTideHeight(now);
+
+    document.getElementById('tide-now-line').setAttribute('x1', nowX);
+    document.getElementById('tide-now-line').setAttribute('x2', nowX);
+    document.getElementById('tide-now-dot').setAttribute('cx', nowX);
+    document.getElementById('tide-now-dot').setAttribute('cy', nowY);
+    document.getElementById('tide-now-label').style.left = `${(nowX / W) * 100}%`;
+
+    // Update current tide display
+    document.getElementById('current-tide-height').textContent = currentH.toFixed(1) + 'm';
+
+    // Trend
+    const future = getTideHeight(new Date(now.getTime() + 30 * 60000));
+    const trend = future > currentH ? '↑ Subiendo' : '↓ Bajando';
+    document.getElementById('tide-trend').textContent = trend + ` · Tendencia próxima hora`;
+
+    // Sea level bar (0m = 0%, 3m = 100%)
+    const pctHeight = Math.min(100, Math.max(5, (currentH / 3.0) * 100));
+    document.getElementById('sea-level-bar').style.height = pctHeight + '%';
+    document.getElementById('sea-level-pct').textContent = Math.round(pctHeight) + '%';
+
+    // Find next high/low tides
+    findNextTides(now);
+}
+
+function updateNextHighTide() {
+    const now = new Date();
+    let nextHigh = null;
+    let highHeight = -1;
+
+    // Buscamos en las próximas 12 horas, minuto a minuto
+    for (let i = 0; i < 720; i++) {
+        const future = new Date(now.getTime() + i * 60000);
+        const h = getTideHeight(future);
+        
+        // Si la altura sube y luego empieza a bajar, es un pico (pleamar)
+        const nextMin = getTideHeight(new Date(future.getTime() + 10 * 60000));
+        if (h > 2.2 && h > nextMin) { // 2.2m es un umbral de seguridad para pleamar
+            nextHigh = future;
+            highHeight = h;
+            break; 
+        }
+    }
+
+    const el = document.getElementById('next-high-tide');
+    if (nextHigh) {
+        const timeStr = nextHigh.getHours().toString().padStart(2, '0') + ':' + 
+                        nextHigh.getMinutes().toString().padStart(2, '0');
+        el.textContent = `${timeStr} · ${highHeight.toFixed(2)}m`;
+        el.classList.remove('loading-pulse');
+    } else {
+        el.textContent = "--:-- · --m";
+    }
+}
+
+ function findNextTides(now){
+   let highs=[],lows=[];
+   for(let i=0;i<24*60;i++){
+     const t1=new Date(now);t1.setHours(0,0,0,0);t1.setMinutes(i);
+     const t0=new Date(t1);t0.setMinutes(i-1);
+     const t2=new Date(t1);t2.setMinutes(i+1);
+     const h0=getTideHeight(t0),h1=getTideHeight(t1),h2=getTideHeight(t2);
+     if(h1>h0 || h1>h2) highs.push({t:t1,h:h1});
+     if(h1<h0 || h1<h2) lows.push({t:t1,h:h1});
+   }
+   const all=[...highs,...lows].filter(x=>x.t>now).sort((a,b)=>a.t-b.t);
+   const nextHigh=highs.filter(x=>x.t>now)[0];
+
+   if(nextHigh){
+     const hh=String(nextHigh.t.getHours()).padStart(2,'0');
+     const mm=String(nextHigh.t.getMinutes()).padStart(2,'0');
+     document.getElementById('next-high-tide').textContent=`${hh}:${mm} · ${nextHigh.h.toFixed(1)}m`;
+     document.getElementById('next-high-tide').classList.remove('loading-pulse');
+   }
+ 
+   // Tide table
+   const tableEl=document.getElementById('tide-table');
+   tableEl.innerHTML='';
+   all.slice(0,6).forEach(item=>{
+     const isHigh=highs.includes(item);
+     const hh=String(item.t.getHours()).padStart(2,'0');
+     const mm=String(item.t.getMinutes()).padStart(2,'0');
+     const diff=(item.t-now)/60000;
+     const rel=diff<60?`en ${Math.round(diff)} min`:`en ${Math.floor(diff/60)}h ${Math.round(diff%60)}min`;
+     const div=document.createElement('div');
+     div.className='flex items-center justify-between p-4';
+     div.innerHTML=`
+      <div class="flex items-center gap-3">
+        <span class="material-symbols-outlined ${isHigh?'text-primary-container':'text-outline'}" style="font-variation-settings:'FILL' 1">
+           ${isHigh?'keyboard_arrow_up':'keyboard_arrow_down'}
+        </span>
+        <div>
+          <p class="font-label-caps text-[10px] ${isHigh?'text-on-primary-container':'text-outline'}">${isHigh?'PLEAMAR':'BAJAMAR'}</p>
+          <p class="font-data-mono font-bold text-lg">${hh}:${mm}</p>
+        </div>
+      </div>
+      <div class="text-right">
+        <p class="font-data-mono text-xl font-bold">${item.h.toFixed(2)}m</p>
+        <p class="text-[10px] text-on-surface-variant">${rel}</p>
+      </div>`;
+     tableEl.appendChild(div);
+   });
+ 
+  // Coefficient (simulated, ~70)
+    const coef = 70;
+    document.getElementById('coef-val').textContent = coef;
+    document.getElementById('coef-bar').style.width = coef + '%';
+    document.getElementById('coef-label').textContent =
+      coef > 70 ? 'Marea viva — amplitud elevada' :
+      coef > 40 ? 'Marea media — condiciones normales' :
+      'Marea muerta — poca amplitud';
+
+   // Date label
+   document.getElementById('tides-date-label').textContent=
+     now.toLocaleDateString('es-ES',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+ 
+   // Tide hours row
+   const nowH=now.getHours()+now.getMinutes()/60;
+   const labels=[];
+   for(let i=0;i<4;i++){
+    const h=(Math.floor(nowH/6)*6+i*6)%24;
+    labels.push(String(h).padStart(2,'0')+':00')
+  }
+   // document.getElementById('tide-hours-row').innerHTML=labels.map((l,i)=>`<div class="${i===1?'text-primary font-bold':''}">${l}</div>`).join(''); 
+ }
+ 
+function getRelativeTime(t) {
+  const diff = (t - new Date()) / 60000;
+  if (diff < 60) return `en ${Math.round(diff)} min`;
+  return `en ${Math.floor(diff/60)}h ${Math.round(diff%60)}min`;
+}
+
+
+
+ // ============================================================
+ // LUNA
+ // ============================================================
+ function updateMoon() {
+   const now = new Date();
+   const knownNew = new Date('2000-01-06T18:14:00Z');
+   const cycle = 29.53058867;
+   
+   // Calcular fase actual en días dentro del ciclo
+   const phase = (((now - knownNew) / 86400000) % cycle + cycle) % cycle;
+   
+   // Corregir iluminación: el coseno de 0 es 1, lo que da 0% de iluminación (Luna Nueva)
+   // Usamos el valor relativo de la fase para que 0 sea nueva y 14.77 sea llena
+   const illum = Math.round((1 - Math.cos(phase / cycle * 2 * Math.PI)) / 2 * 100);
+   
+   const phases = [
+      {name:'Luna Nueva', e:'🌑', r:[0, 1.85]},
+      {name:'Creciente', e:'🌒', r:[1.85, 7.38]},
+      {name:'Cuarto Creciente', e:'🌓', r:[7.38, 11.07]},
+      {name:'Gibosa Creciente', e:'🌔', r:[11.07, 14.77]},
+      {name:'Luna Llena', e:'🌕', r:[14.77, 16.61]},
+      {name:'Gibosa Menguante', e:'🌖', r:[16.61, 22.15]},
+      {name:'Cuarto Menguante', e:'🌗', r:[22.15, 25.84]},
+      {name:'Menguante', e:'🌘', r:[25.84, 29.53]}
+   ];
+
+   // CORRECCIÓN AQUÍ: usamos && para comprobar que está dentro del rango
+   const ph = phases.find(p => phase >= p.r[0] && phase < p.r[1]) || phases[0];
+   
+   document.getElementById('moon-phase').textContent = ph.name;
+   document.getElementById('moon-emoji').textContent = ph.e;
+   document.getElementById('moon-illum').textContent = `Iluminación: ${illum}%`;
+   
+   // Cálculo de próxima Luna Llena (14.77 días dentro del ciclo)
+   const fullMoonPhase = 14.77;
+   let daysToFull = fullMoonPhase - phase;
+   if (daysToFull < 0) daysToFull += cycle;
+   
+   const nextFull = new Date(now.getTime() + (daysToFull * 86400000));
+   document.getElementById('next-full-moon').textContent = 
+      `${String(nextFull.getDate()).padStart(2,'0')}/${String(nextFull.getMonth()+1).padStart(2,'0')}`;
+}
+ 
+ // ============================================================
+ // TABS & NAV
+ // ============================================================
+ function switchTab(tab,navEl){
+   document.querySelectorAll('.tab-content').forEach(el=>el.classList.remove('active'));
+   document.querySelectorAll('.nav-item').forEach(el=>el.classList.remove('active'));
+   document.getElementById('tab-'+tab).classList.add('active');
+   navEl.classList.add('active');
+   window.scrollTo({top:0,behavior:'smooth'});
+   closeAllPanels();
+ }
+ 
+ // ============================================================
+ // DARK MODE
+ // ============================================================
+ function toggleDarkMode(){
+   state.darkMode=!state.darkMode;
+   document.documentElement.classList.toggle('dark',state.darkMode);
+   const dot=document.getElementById('dark-toggle-dot');
+   const btn=document.getElementById('dark-mode-toggle');
+   dot.style.transform=state.darkMode?'translateX(24px)':'translateX(0)';
+   btn.className=`w-12 h-6 rounded-full relative transition-colors duration-200 ${state.darkMode?'bg-primary-container':'bg-outline-variant'}`;
+   showToast(state.darkMode?'Modo oscuro activado':'Modo claro activado');
+ }
+ 
+ // ============================================================
+ // WIND UNITS
+ // ============================================================
+ function updateWindUnit(){
+   state.windUnit=document.getElementById('wind-unit').value;
+   if(state.windKnots!==null){
+     document.getElementById('wind-display').textContent=`${windConvert(state.windKnots)} ${windLabel()} ${degToCard(state.windDeg||0)}`;
+     document.getElementById('wind-gust').textContent=`${windConvert(state.windGustKnots||0)} ${windLabel()}`;
+     document.getElementById('wind-speed-detail').textContent=`${windConvert(state.windKnots)} ${windLabel()}`;
+     document.getElementById('wind-gust-detail').textContent=`${windConvert(state.windGustKnots||0)} ${windLabel()}`;
+     document.getElementById('port-wind').textContent=`${windConvert(state.windKnots)} ${windLabel()}`;
+   }
+   showToast(`Unidades: ${windLabel()}`);
+ }
+ 
+ // ============================================================
+ // SOS
+ // ============================================================
+ let sosTimer=null;
+ document.getElementById('sos-btn').addEventListener('pointerdown',()=>{
+   sosTimer=setTimeout(()=>{
+     showToast('🚨 MAYDAY · Contactando Canal 16 VHF',4000);
+     document.getElementById('sos-btn').style.background='#7f0000';
+     setTimeout(()=>document.getElementById('sos-btn').style.background='',2000);
+   },1500);
+ });
+ document.getElementById('sos-btn').addEventListener('pointerup',()=>clearTimeout(sosTimer));
+ document.getElementById('sos-btn').addEventListener('pointerleave',()=>clearTimeout(sosTimer));
+ document.getElementById('sos-btn').addEventListener('click',()=>showToast('Mantén pulsado 1.5s para activar emergencia',2000));
+ 
+ // ============================================================
+ // AUTO-REFRESH cada 10 minutos
+ // ============================================================
+ function refreshAll(){
+   loadWeather();
+   loadMarine();
+   buildTideSVG();
+   updateNextHighTide();
+ }
+ setInterval(refreshAll, 10*60*1000);
+ setInterval(buildTideSVG, 30*1000);
+ 
+ // ============================================================
+ // INIT
+ // ============================================================
+ (function init(){
+   updateMoon();
+   buildTideSVG();
+   updateNextHighTide();
+   loadWeather();
+   loadMarine();
+   initModal();
+ })();
+</script>
+</body>
+</html>
