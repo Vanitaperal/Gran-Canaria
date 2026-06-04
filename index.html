@@ -722,16 +722,19 @@ document.addEventListener('click', e => {
  // AEMET no permite CORS directo desde browser → usamos proxy
  // ============================================================
  const CORS = 'https://corsproxy.io/?url=';
+ const IS_LOCAL = location.protocol === 'file:';
 
- async function aemetFetch(url){
-   // Intenta directo primero (por si el navegador/entorno lo permite)
-   // Si falla CORS, usa proxy
+ // Wrapper: usa proxy automáticamente si estamos en file:// o si el fetch directo falla CORS
+ async function smartFetch(url, opts={}){
+   if(IS_LOCAL){
+     return fetch(CORS + encodeURIComponent(url), opts);
+   }
    try {
-     const r = await fetch(url, {headers:{'Accept':'application/json'}});
-     if(!r.ok) throw new Error('direct fail');
+     const r = await fetch(url, opts);
+     if(!r.ok && r.status !== 200) throw new Error('non-200');
      return r;
    } catch(e) {
-     return fetch(CORS + encodeURIComponent(url), {headers:{'Accept':'application/json'}});
+     return fetch(CORS + encodeURIComponent(url), opts);
    }
  }
 
@@ -743,7 +746,7 @@ document.addEventListener('click', e => {
    const badge = document.getElementById('notif-badge');
 
    try {
-     const metaRes = await aemetFetch(
+     const metaRes = await smartFetch(
        `https://opendata.aemet.es/opendata/api/avisos_cap/ultimoelaborado/area/61?api_key=${state.aemetKey}`
      );
      const meta = await metaRes.json();
@@ -839,7 +842,7 @@ document.addEventListener('click', e => {
 
  async function loadAemetCoastalFallback(){
    try {
-     const metaRes = await aemetFetch(
+     const metaRes = await smartFetch(
        `https://opendata.aemet.es/opendata/api/prediccion/maritima/costera/costa/46?api_key=${state.aemetKey}`
      );
      const meta = await metaRes.json();
@@ -961,7 +964,7 @@ document.addEventListener('click', e => {
        `&timezone=Atlantic%2FCanary`+
        `&forecast_days=7`;
  
-     const res = await fetch(url);
+     const res = await smartFetch(url);
      const data = await res.json();
      const cur = data.current;
  
@@ -1054,7 +1057,7 @@ document.addEventListener('click', e => {
        `&hourly=wave_height,wave_period,wave_direction`+
        `&forecast_days=1`;
  
-     const res = await fetch(url);
+     const res = await smartFetch(url);
      const data = await res.json();
      const cur = data.current;
  
