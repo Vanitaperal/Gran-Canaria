@@ -655,17 +655,6 @@ document.addEventListener('click', e => {
  // ============================================================
  // AEMET API KEY MODAL
  // ============================================================
- function initModal(){
-   // Key hardcoded — modal never shown
-   document.getElementById('api-modal').classList.add('hidden');
-   // Persist to localStorage for consistency
-   if(!localStorage.getItem('vanitaperal_aemet_key')){
-     localStorage.setItem('vanitaperal_aemet_key', state.aemetKey);
-   }
-   document.getElementById('aemet-key-status').textContent='Configurada';
-   document.getElementById('src-aemet').textContent='AEMET Live';
-   document.getElementById('src-aemet').className='source-badge source-live';
- }
  function saveAemetKey(){
    const k=document.getElementById('aemet-key-input').value.trim();
    if(!k){showToast('Introduce una API key válida');return;}
@@ -722,20 +711,15 @@ document.addEventListener('click', e => {
  // AEMET no permite CORS directo desde browser → usamos proxy
  // ============================================================
  const CORS = 'https://corsproxy.io/?url=';
- const IS_LOCAL = location.protocol === 'file:';
 
- // Wrapper: usa proxy automáticamente si estamos en file:// o si el fetch directo falla CORS
- async function smartFetch(url, opts={}){
-   if(IS_LOCAL){
-     return fetch(CORS + encodeURIComponent(url), opts);
-   }
-   try {
-     const r = await fetch(url, opts);
-     if(!r.ok && r.status !== 200) throw new Error('non-200');
-     return r;
-   } catch(e) {
-     return fetch(CORS + encodeURIComponent(url), opts);
-   }
+ // Open-Meteo tiene CORS abierto — fetch directo sin proxy
+ async function apiFetch(url, opts={}){
+   return fetch(url, opts);
+ }
+
+ // AEMET no permite CORS — siempre proxy
+ async function aemetFetch(url, opts={}){
+   return fetch(CORS + encodeURIComponent(url), {...opts, headers:{...opts.headers,'Accept':'application/json'}});
  }
 
  async function loadAemetWarnings() {
@@ -746,7 +730,7 @@ document.addEventListener('click', e => {
    const badge = document.getElementById('notif-badge');
 
    try {
-     const metaRes = await smartFetch(
+     const metaRes = await aemetFetch(
        `https://opendata.aemet.es/opendata/api/avisos_cap/ultimoelaborado/area/61?api_key=${state.aemetKey}`
      );
      const meta = await metaRes.json();
@@ -759,7 +743,7 @@ document.addEventListener('click', e => {
        return;
      }
 
-     const dataRes = await fetch(CORS + encodeURIComponent(meta.datos));
+     const dataRes = await aemetFetch(meta.datos);
      const text = await dataRes.text();
 
      const parser = new DOMParser();
@@ -842,13 +826,13 @@ document.addEventListener('click', e => {
 
  async function loadAemetCoastalFallback(){
    try {
-     const metaRes = await smartFetch(
+     const metaRes = await aemetFetch(
        `https://opendata.aemet.es/opendata/api/prediccion/maritima/costera/costa/46?api_key=${state.aemetKey}`
      );
      const meta = await metaRes.json();
      if(!meta.datos) throw new Error('No data URL');
 
-     const dataRes = await fetch(CORS + encodeURIComponent(meta.datos));
+     const dataRes = await aemetFetch(meta.datos);
      const json = await dataRes.json();
 
      const container = document.getElementById('aemet-warnings-container');
@@ -964,7 +948,7 @@ document.addEventListener('click', e => {
        `&timezone=Atlantic%2FCanary`+
        `&forecast_days=7`;
  
-     const res = await smartFetch(url);
+     const res = await apiFetch(url);
      const data = await res.json();
      const cur = data.current;
  
@@ -1057,7 +1041,7 @@ document.addEventListener('click', e => {
        `&hourly=wave_height,wave_period,wave_direction`+
        `&forecast_days=1`;
  
-     const res = await smartFetch(url);
+     const res = await apiFetch(url);
      const data = await res.json();
      const cur = data.current;
  
@@ -1495,6 +1479,11 @@ function getRelativeTime(t) {
    updateNextHighTide();
    loadWeather();
    loadMarine();
+   // Key hardcoded en state.aemetKey — actualizar UI y cargar avisos
+   document.getElementById('aemet-key-status').textContent = 'Configurada ✓';
+   document.getElementById('src-aemet').textContent = 'AEMET Live';
+   document.getElementById('src-aemet').className = 'source-badge source-live';
+   loadAemetWarnings();
  })();
 </script>
 </body>
