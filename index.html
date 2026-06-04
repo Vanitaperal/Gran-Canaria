@@ -712,15 +712,26 @@ document.addEventListener('click', e => {
  // ============================================================
  const CORS = 'https://corsproxy.io/?url=';
 
- // Open-Meteo tiene CORS abierto — fetch directo sin proxy
+ // Open-Meteo: intenta directo, si falla usa proxy
  async function apiFetch(url, opts={}){
-   return fetch(url, opts);
+   try {
+     const r = await fetch(url, opts);
+     if(r.ok) return r;
+     throw new Error('non-200');
+   } catch(e) {
+     return fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`, opts);
+   }
  }
 
- // AEMET no permite CORS — siempre proxy
+ // AEMET no permite CORS — siempre proxy, con cooldown de 65s entre llamadas
+ let _aemetLastCall = 0;
  async function aemetFetch(url, opts={}){
+   const now = Date.now();
+   if(now - _aemetLastCall < 65000 && _aemetLastCall > 0){
+     throw new Error('AEMET cooldown activo, espera unos segundos');
+   }
+   _aemetLastCall = now;
    const headers = {...opts.headers, 'Accept':'application/json'};
-   // Intentamos dos proxies en orden, el primero que responda gana
    const proxies = [
      u => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
      u => `https://corsproxy.io/?url=${encodeURIComponent(u)}`,
@@ -1468,6 +1479,7 @@ function getRelativeTime(t) {
    showToast(`Unidades: ${windLabel()}`);
  }
  
+
  
  // ============================================================
  // AUTO-REFRESH cada 10 minutos
