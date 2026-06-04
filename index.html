@@ -1271,25 +1271,27 @@ function updateNextHighTide() {
 }
 
  function findNextTides(now){
-   // Detect peaks/troughs by scanning minute by minute up to 48h ahead
    const tides = [];
-   const lookAhead = 48 * 60; // minutes
-   for(let i = 1; i < lookAhead - 1; i++){
-     const t0 = new Date(now.getTime() + (i-1)*60000);
-     const t1 = new Date(now.getTime() + i*60000);
-     const t2 = new Date(now.getTime() + (i+1)*60000);
-     const h0 = getTideHeight(t0);
-     const h1 = getTideHeight(t1);
-     const h2 = getTideHeight(t2);
-     if(h1 > h0 && h1 > h2){
-       // Local maximum → pleamar
-       if(tides.length === 0 || (t1 - tides[tides.length-1].t) > 3*60*60*1000){
-         tides.push({t: t1, h: h1, isHigh: true});
-       }
-     } else if(h1 < h0 && h1 < h2){
-       // Local minimum → bajamar
-       if(tides.length === 0 || (t1 - tides[tides.length-1].t) > 3*60*60*1000){
-         tides.push({t: t1, h: h1, isHigh: false});
+   const STEP = 5;          // muestrear cada 5 minutos (más rápido y evita empates)
+   const WINDOW = 30;       // comparar con ±30 min para detectar pico real
+   const lookAhead = 72 * 60; // 72h por si acaso
+
+   for(let i = WINDOW; i < lookAhead - WINDOW; i += STEP){
+     const tPrev = new Date(now.getTime() + (i - WINDOW)*60000);
+     const tCurr = new Date(now.getTime() + i*60000);
+     const tNext = new Date(now.getTime() + (i + WINDOW)*60000);
+     const hPrev = getTideHeight(tPrev);
+     const hCurr = getTideHeight(tCurr);
+     const hNext = getTideHeight(tNext);
+
+     const isMax = hCurr > hPrev && hCurr > hNext;
+     const isMin = hCurr < hPrev && hCurr < hNext;
+
+     if(isMax || isMin){
+       // Evitar duplicados: distancia mínima 4h respecto al último encontrado
+       const tooClose = tides.length > 0 && (tCurr - tides[tides.length-1].t) < 4*60*60*1000;
+       if(!tooClose){
+         tides.push({t: tCurr, h: hCurr, isHigh: isMax});
        }
      }
      if(tides.length >= 6) break;
