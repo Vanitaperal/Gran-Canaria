@@ -4,7 +4,8 @@
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0, viewport-fit=cover" name="viewport"/>
 <title>VANITAPERAL | Maritime Dashboard</title>
-<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script src="https://cdn.tailwindcss.com/3.4.16"></script>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚓</text></svg>"/>
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&family=Playfair+Display:wght@600;700&family=Courier+Prime&display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
 <script id="tailwind-config">
@@ -276,7 +277,12 @@ tailwind.config = {
 
 // ----- CONSTANTES -----
 const LAT = 28.15, LON = -15.42;
-const CORS_PROXY = 'https://corsproxy.io/?url=';
+const CORS_PROXIES = [
+  'https://api.allorigins.win/raw?url=',
+  'https://corsproxy.io/?url=',
+  'https://api.codetabs.com/v1/proxy?quest=',
+];
+const CORS_PROXY = CORS_PROXIES[0]; // legacy compat
 const API_TIMEOUT = 15000;
 const TIDE_CONSTITUENTS = [
   { A: 0.52, speed: 2*Math.PI/(12.4206*3600), phase: 0.00 },   // M2
@@ -476,16 +482,19 @@ async function fetchWithTimeout(url, options = {}, timeout = API_TIMEOUT) {
 }
 
 async function apiFetch(url, opts = {}) {
-  try {
-    const response = await fetchWithTimeout(url, opts);
-    if (response.ok) return response;
-    throw new Error(`HTTP ${response.status}`);
-  } catch (e) {
-    const proxyUrl = CORS_PROXY + encodeURIComponent(url);
-    const proxyResponse = await fetchWithTimeout(proxyUrl, opts);
-    if (proxyResponse.ok) return proxyResponse;
-    throw new Error(`Proxy failed: ${e.message}`);
+  // Try direct first, then each proxy in order
+  const attempts = [url, ...CORS_PROXIES.map(p => p + encodeURIComponent(url))];
+  let lastErr;
+  for (const attempt of attempts) {
+    try {
+      const response = await fetchWithTimeout(attempt, opts);
+      if (response.ok) return response;
+      lastErr = new Error(`HTTP ${response.status}`);
+    } catch (e) {
+      lastErr = e;
+    }
   }
+  throw lastErr;
 }
 
 async function aemetFetch(url, opts = {}) {
@@ -493,12 +502,23 @@ async function aemetFetch(url, opts = {}) {
   if (now - state.aemetLastCall < 65000 && state.aemetLastCall > 0) {
     throw new Error('AEMET cooldown activo (65s)');
   }
-  state.aemetLastCall = now;
   const headers = { ...opts.headers, 'Accept': 'application/json' };
-  const proxyUrl = CORS_PROXY + encodeURIComponent(url);
-  const response = await fetchWithTimeout(proxyUrl, { ...opts, headers });
-  if (!response.ok) throw new Error(`AEMET error: ${response.status}`);
-  return response;
+  let lastErr;
+  for (const proxy of CORS_PROXIES) {
+    const proxyUrl = proxy + encodeURIComponent(url);
+    try {
+      const response = await fetchWithTimeout(proxyUrl, { ...opts, headers });
+      if (response.ok) {
+        state.aemetLastCall = Date.now(); // only set cooldown on success
+        console.info(`[AEMET] ✓ via ${proxy}`);
+        return response;
+      }
+      lastErr = new Error(`AEMET error: ${response.status}`);
+    } catch (e) {
+      lastErr = e;
+    }
+  }
+  throw lastErr;
 }
 
 function buildForecast(daily) {
@@ -852,7 +872,7 @@ async function loadAemetWarnings() {
     
     if (meta.estado !== 200 || !meta.datos) throw new Error(meta.descripcion || 'No data');
     
-    const dataRes = await aemetFetch(meta.datos);
+    const dataRes = await apiFetch(meta.datos);
     const text = await dataRes.text();
     const parser = new DOMParser();
     const xml = parser.parseFromString(text, 'text/xml');
@@ -942,7 +962,7 @@ async function loadAemetCoastalFallback() {
     const meta = await metaRes.json();
     if (!meta.datos) throw new Error('No data URL');
     
-    const dataRes = await aemetFetch(meta.datos);
+    const dataRes = await apiFetch(meta.datos);
     const json = await dataRes.json();
     
     if (json && json[0]) {
